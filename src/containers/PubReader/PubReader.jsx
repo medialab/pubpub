@@ -11,7 +11,7 @@ import {closeMenu} from '../../actions/nav';
 
 import {convertImmutableListToObject} from '../../utils/parsePlugins';
 
-import {PubBody, PubModals, PubNav, LoaderDeterminate, PubLeftBar} from '../../components';
+import {PubBody, PubModals, PubNav, LoaderDeterminate, PubLeftBar, VideoReviews} from '../../components';
 import {Discussions} from '../';
 
 import {globalStyles, pubSizes} from '../../utils/styleConstants';
@@ -182,7 +182,7 @@ const PubReader = React.createClass({
 			const srcRegex = /{{image:.*(src=([^\s,]*)).*}}/;
 			const match = srcRegex.exec(pubData.history[versionIndex].markdown);
 			const refName = match ? match[2] : undefined;
-			
+
 			let leadImage = undefined;
 			for (let index = pubData.history[versionIndex].assets.length; index--;) {
 				if (pubData.history[versionIndex].assets[index].refName === refName) {
@@ -199,7 +199,7 @@ const PubReader = React.createClass({
 			metaData.title = 'PubPub - ' + this.props.slug;
 		}
 
-		
+
 		// console.log(this.state.htmlTree);
 		// console.log(pubData);
 		return (
@@ -212,6 +212,8 @@ const PubReader = React.createClass({
 						opacity: '0',
 					}
 				}} />
+				
+				<VideoReviews/>
 
 				<div className="leftBar" style={[styles.leftBar, globalStyles[this.props.readerData.get('status')], pubData.markdown === undefined && {display: 'none'}]}>
 
@@ -291,12 +293,12 @@ const PubReader = React.createClass({
 						featuredIn={pubData.featuredIn}
 						submittedTo={pubData.submittedTo}
 						// Reviews Data
-						reviewsData={pubData.reviews} 
-						
-						// Discussions Data						
+						reviewsData={pubData.reviews}
+
+						// Discussions Data
 						toggleHighlightsHandler={this.toggleHighlights}
-						showPubHighlights={this.props.readerData.get('showPubHighlights')}/> 
-						
+						showPubHighlights={this.props.readerData.get('showPubHighlights')}/>
+
 
 				</div>
 
@@ -313,7 +315,7 @@ const PubReader = React.createClass({
 								<FormattedMessage {...globalMessages.turnHighlights}/>
 								{' '}
 								{this.props.readerData.get('showPubHighlights')
-									? <FormattedMessage {...globalMessages.off}/> 
+									? <FormattedMessage {...globalMessages.off}/>
 									: <FormattedMessage {...globalMessages.on}/> }
 								</span>
 						</div>

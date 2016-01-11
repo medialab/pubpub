@@ -33,3 +33,4 @@ export Reference from './Reference/Reference';
 export UserGallery from './UserGallery/UserGallery';
 export UserMain from './UserMain/UserMain';
 export UserSettings from './UserSettings/UserSettings';
+export VideoReviews from './VideoReviews/VideoReviews';

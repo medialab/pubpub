@@ -118,16 +118,21 @@ const PubBody = React.createClass({
 		});
 	},
 
+	clicked: function(evt) {
+		console.log('clicked!');
+		console.log(evt);
+	},
+
 	render: function() {
 		return (
 			<ResizingText fontRatio={60} minFont={this.props.minFont}>
 
-			<div style={styles.container}>
+			<div style={styles.container} onClick={this.clicked}>
 
 				<Style rules={this.compileStyleRules()}/>
 
-				<div id="pubContent" style={[styles.contentContainer, globalStyles[this.props.status]]} >
-					
+				<div id="pubContent" style={[styles.contentContainer, globalStyles[this.props.status]]} onClick={this.clicked} onSelect={this.clicked} onScroll={this.clicked} >
+
 					{!this.props.isFeatured && !this.props.errorView
 						? <div style={styles.submittedNotification}>This Pub has been submitted to - but is not yet featured in - this journal.</div>
 						: null

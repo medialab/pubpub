@@ -35,7 +35,7 @@ const PubSelectionPopup = React.createClass({
 		require('rangy/lib/rangy-textrange.js');
 		document.getElementById('pubBodyContent').addEventListener('mouseup', this.onMouseUp);
 	},
-	
+
 	componentWillUnmount() {
 		document.getElementById('pubBodyContent').removeEventListener('mouseup', this.onMouseUp);
 	},
@@ -43,13 +43,13 @@ const PubSelectionPopup = React.createClass({
 	onMouseUp: function(event) {
 		// Right now, we only trigger the selectionPopup when the selection is
 		// contained to a single P element. Support for headers, multiple paragraphs, and UL/OL
-		// creates many many edge cases for storing and re-highlighting (especially as new 
-		// versions are published). Support for lists could work by wrapping them in a P tag. 
+		// creates many many edge cases for storing and re-highlighting (especially as new
+		// versions are published). Support for lists could work by wrapping them in a P tag.
 		// Or, perhaps are more broad solution can be eventually built. For now, I think the bulk of
-		// functionality is met by only supporting P-tag highlights. 
-		// If we aren't supporting the current selection, we make no changes to the range. We could 
-		// automatically snap to a supported section within the current range if we wanted to specifically 
-		// push behavior, but maybe that's overkill. 
+		// functionality is met by only supporting P-tag highlights.
+		// If we aren't supporting the current selection, we make no changes to the range. We could
+		// automatically snap to a supported section within the current range if we wanted to specifically
+		// push behavior, but maybe that's overkill.
 		// We could also start storing the type of element with the selection range. This would allow us to populate across
 		// element types and across versions using the same technique as we do for P tags (replacing the nth-child index number
 		// based on some hash)
@@ -69,7 +69,7 @@ const PubSelectionPopup = React.createClass({
 		// console.log(range);
 		// console.log(range.commonAncestorContainer);
 		if (!selection.isCollapsed && isDescendantOfP(range.commonAncestorContainer)) {
-			
+
 			Rangy.getSelection().expand('word');
 			const ancestorText = getAncestorText(range.commonAncestorContainer);
 			this.setState({
@@ -89,7 +89,7 @@ const PubSelectionPopup = React.createClass({
 				popupVisible: false,
 			});
 		}
-				
+
 	},
 
 	onHighlightSave: function() {
@@ -116,7 +116,7 @@ const PubSelectionPopup = React.createClass({
 			left: this.state.xLoc,
 		};
 	},
-	
+
 	render: function() {
 
 		return (
@@ -158,7 +158,7 @@ styles = {
 		'@media screen and (min-width: 1600px)': {
 			marginLeft: -223,
 		},
-		
+
 	},
 	pluginPopupVisible: {
 		opacity: 1,

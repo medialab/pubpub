@@ -13,6 +13,9 @@ import dateFormat from 'dateformat';
 import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
 
+import ReactTestUtils from 'react-addons-test-utils';
+let Rangy = undefined;
+
 let styles = {};
 
 const PubBody = React.createClass({
@@ -55,6 +58,9 @@ const PubBody = React.createClass({
 
 	componentDidMount() {
 		loadCss(this.props.style.googleFontURL);
+		document.addEventListener('selectionchange', this.selected);
+		Rangy = require('rangy');
+		require('rangy/lib/rangy-textrange.js');
 	},
 
 	componentWillReceiveProps(nextProps) {
@@ -119,8 +125,36 @@ const PubBody = React.createClass({
 	},
 
 	clicked: function(evt) {
-		console.log('clicked!');
+
+		const node = evt.target;
+		const waitClick = function() {
+			ReactTestUtils.Simulate.click(node);
+		}.bind(this);
+
+		// setTimeout(waitClick, 3000);
+		// console.log('clicked!');
+		// console.log(evt);
+	},
+
+	selected: function(evt) {
+		// ReactTestUtils.
+		const test = ReactTestUtils;
+		console.log('selected!');
 		console.log(evt);
+		console.log(evt.currentTarget);
+		const temp = Rangy;
+		debugger;
+		const sel = Rangy.getSelection().saveSelection();
+
+		const waitSel = function() {
+			console.log('restoring selection');
+			Rangy.restoreSelection(sel);
+
+		}.bind(this);
+
+		setTimeout(waitSel, 10000);
+
+		// debugger;
 	},
 
 	render: function() {
@@ -131,7 +165,7 @@ const PubBody = React.createClass({
 
 				<Style rules={this.compileStyleRules()}/>
 
-				<div id="pubContent" style={[styles.contentContainer, globalStyles[this.props.status]]} onClick={this.clicked} onSelect={this.clicked} onScroll={this.clicked} >
+				<div id="pubContent" style={[styles.contentContainer, globalStyles[this.props.status]]} onClick={this.clicked} onChangeSelection={this.selected} onScroll={this.clicked} >
 
 					{!this.props.isFeatured && !this.props.errorView
 						? <div style={styles.submittedNotification}>This Pub has been submitted to - but is not yet featured in - this journal.</div>

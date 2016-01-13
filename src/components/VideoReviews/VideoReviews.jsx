@@ -1,9 +1,11 @@
 import React from 'react';
 import RecordRTC from './RTCWrapper';
 import Radium from 'radium';
+import lodash from 'lodash';
 
 let styles = {};
-
+let Rangy = null;
+let Marklib = null;
 
 function getRandomString() {
 	let result;
@@ -33,18 +35,195 @@ function xhr(url, data, callback) {
 }
 
 
+function xhrGet(url, callback) {
+	const request = new XMLHttpRequest();
+	request.onreadystatechange = function() {
+		if (request.readyState === 4 && request.status === 200) {
+			callback(JSON.parse(request.responseText));
+		}
+	};
+	request.open('GET', url);
+	request.send();
+}
+
+
 const VideoReviews = React.createClass({
 
 	getInitialState: function() {
 		this.recordAudio = null;
 		this.recordVideo = null;
+		this.selected = lodash.debounce(this._selected, 25);
+
 		return {
 			recording: false,
 		};
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;
+
+		Marklib = require('marklib');
+		Rangy = require('rangy');
+		require('rangy/lib/rangy-textrange.js');
+		require('rangy/lib/rangy-serializer.js');
+		require('rangy/lib/rangy-selectionsaverestore.js');
+		window.rangy = Rangy;
+		window.Marklib = Marklib;
+		this.Marklib = Marklib;
+		Rangy.init();
+		//	const renderer = new Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
+		//	const result = renderer.renderWithRange(this.state.range);
 	},
+
+	startActionRecording: function() {
+		document.addEventListener('selectionchange', this.selected);
+		document.querySelector('.centerBar').addEventListener('scroll', this.scroll);
+		document.getElementById('pubContent').addEventListener('mousemove', this.mouse);
+		this.startRecordingDate = new Date().getTime();
+		this.actions = [];
+		this.scroll();
+	},
+	stopActionRecording: function() {
+		document.removeEventListener('selectionchange', this.selected);
+		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
+		document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
+
+		console.log(this.actions);
+
+		xhr('http://videoreviews.herokuapp.com/record', JSON.stringify(this.actions), function(response) {
+			console.log(response);
+		});
+
+	},
+
+	fetchRecording: function() {
+		this.restoreSelections(this.actions);
+		/*
+		xhrGet('http://videoreviews.herokuapp.com/fetch', function(actions) {
+			this.restoreSelections(actions);
+		}.bind(this));
+		*/
+	},
+
+	restoreSelections: function(actions) {
+
+		let lastSelection = null;
+
+		const playSelection = function(action) {
+
+			const range = action.range;
+			if (lastSelection) {
+				lastSelection.destroy();
+			}
+			// const rendering = new Marklib.Rendering(pubContent);
+
+			if (range !== '') {
+				const rendering = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
+				rendering.renderWithResult(range);
+				lastSelection = rendering;
+			} else {
+				lastSelection = null;
+			}
+
+			/*
+			const rangeInfos = sel.rangeInfos;
+			for (const range of rangeInfos) {
+				range.document = window.document;
+			}
+			sel.rangeInfos = rangeInfos;
+			Rangy.restoreSelection(sel);
+			*/
+		};
+
+		const playScroll = function(scroll) {
+			const pos = scroll.pos;
+			document.querySelector('.centerBar').scrollTop = pos;
+		};
+
+		const playMouse = function(mouse) {
+			try {
+				const pos = mouse.pos;
+				this.mouseElem.style.left = pos.x + 'px';
+				this.mouseElem.style.top = pos.y + 'px';
+			} catch (err) {
+				console.log(err);
+			}
+		}.bind(this);
+
+
+		for (const action of actions) {
+			if (action.type === 'select') {
+				setTimeout(playSelection.bind(this, action), action.time);
+			} else if (action.type === 'scroll') {
+				setTimeout(playScroll.bind(this, action), action.time);
+			} else if (action.type === 'mouse') {
+				setTimeout(playMouse.bind(this, action), action.time);
+			}
+		}
+
+	},
+
+	mouse: function(evt) {
+		const mouse = {};
+		const leftOffset = document.getElementById('pubContent').getBoundingClientRect().left;
+		const topOffset = document.getElementById('pubContent').getBoundingClientRect().top;
+
+		mouse.pos = {x: evt.pageX - leftOffset, y: evt.pageY + document.getElementById('pubContent').scrollTop - topOffset + 60};
+		mouse.type = 'mouse';
+
+		mouse.time = new Date().getTime() - this.startRecordingDate;
+		this.actions.push(mouse);
+	},
+
+	scroll: function(evt) {
+		const scroll = {};
+		scroll.pos = document.querySelector('.centerBar').scrollTop;
+		scroll.type = 'scroll';
+		scroll.time = new Date().getTime() - this.startRecordingDate;
+		this.actions.push(scroll);
+	},
+
+	_selected: function(evt) {
+		const selectionStr = window.getSelection().toString().trim();
+
+		if (selectionStr !== this.lastStr) {
+
+			const selection = document.getSelection();
+			let serializedRange;
+
+			if (selectionStr !== '') {
+				const mark = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
+				const range = mark.renderWithRange(selection.getRangeAt(0));
+				serializedRange = range.serialize();
+				mark.destroy();
+			} else {
+				serializedRange = '';
+			}
+
+			console.log(selectionStr);
+
+			const action = {
+				type: 'select',
+				time: new Date().getTime() - this.startRecordingDate
+			};
+
+			action.range = serializedRange;
+			this.actions.push(action);
+			this.lastStr = selectionStr;
+
+			// const serializeSel = Rangy.serializeSelection(rawSel);
+			// console.log(serializeSel);
+
+			/*
+			const rawSel = Rangy.saveSelection();
+			const sel = JSON.parse(JSON.stringify(rawSel));
+			sel.time = new Date().getTime() - this.startRecordingDate;
+			sel.type = 'select';
+			this.actions.push(sel);
+			this.lastStr = window.getSelection().toString();
+			*/
+		}
+	},
+
 	startRecording: function() {
 		this.state.recording = true;
 		navigator.getUserMedia({
@@ -145,8 +324,9 @@ const VideoReviews = React.createClass({
 				</p><hr />
 
 				<div>
-					<button id="start-recording" onClick={this.startRecording}>Start Recording</button>
-					<button id="stop-recording" onClick={this.stopRecording}>Stop Recording</button>
+					<button id="start-recording" onClick={this.startActionRecording}>Start Recording</button>
+					<button id="stop-recording" onClick={this.stopActionRecording}>Stop Recording</button>
+					<button id="stop-recording" onClick={this.fetchRecording}>Fetch Recording</button>
 				</div>
 			</div>
 		);

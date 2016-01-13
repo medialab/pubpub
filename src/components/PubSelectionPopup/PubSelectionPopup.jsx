@@ -70,7 +70,7 @@ const PubSelectionPopup = React.createClass({
 		// console.log(range.commonAncestorContainer);
 		if (!selection.isCollapsed && isDescendantOfP(range.commonAncestorContainer)) {
 
-			Rangy.getSelection().expand('word');
+			// Rangy.getSelection().expand('word');
 			const ancestorText = getAncestorText(range.commonAncestorContainer);
 			this.setState({
 				popupVisible: true,

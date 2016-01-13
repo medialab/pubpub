@@ -2,6 +2,7 @@ import React from 'react';
 import RecordRTC from './RTCWrapper';
 import Radium from 'radium';
 import lodash from 'lodash';
+import Rwg from 'random-word-generator';
 
 let styles = {};
 let Rangy = null;
@@ -87,21 +88,16 @@ const VideoReviews = React.createClass({
 		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
 		document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
 
-		console.log(this.actions);
-
-		xhr('http://videoreviews.herokuapp.com/record', JSON.stringify(this.actions), function(response) {
-			console.log(response);
+		xhr('http://videoreviews.herokuapp.com/record', JSON.stringify(this.actions), function(fileName) {
+			console.log(fileName);
 		});
-
 	},
 
 	fetchRecording: function() {
-		this.restoreSelections(this.actions);
-		/*
+		// this.restoreSelections(this.actions);
 		xhrGet('http://videoreviews.herokuapp.com/fetch', function(actions) {
 			this.restoreSelections(actions);
 		}.bind(this));
-		*/
 	},
 
 	restoreSelections: function(actions) {
@@ -199,8 +195,6 @@ const VideoReviews = React.createClass({
 				serializedRange = '';
 			}
 
-			console.log(selectionStr);
-
 			const action = {
 				type: 'select',
 				time: new Date().getTime() - this.startRecordingDate
@@ -225,7 +219,17 @@ const VideoReviews = React.createClass({
 	},
 
 	startRecording: function() {
+
 		this.state.recording = true;
+
+
+		document.addEventListener('selectionchange', this.selected);
+		document.querySelector('.centerBar').addEventListener('scroll', this.scroll);
+		document.getElementById('pubContent').addEventListener('mousemove', this.mouse);
+		this.startRecordingDate = new Date().getTime();
+		this.actions = [];
+		this.scroll();
+
 		navigator.getUserMedia({
 			audio: true,
 			video: true
@@ -252,22 +256,33 @@ const VideoReviews = React.createClass({
 		}.bind(this), function(error) {
 			console.log(JSON.stringify(error));
 		});
+
+		this.forceUpdate();
 	},
 
 	stopRecording: function() {
+
+		this.state.recording = false;
+		this.forceUpdate();
+
+
+		document.removeEventListener('selectionchange', this.selected);
+		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
+		document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
+
 		const onStopRecording = function() {
 			this.recordAudio.getDataURL(function(audioDataURL) {
 				if (!this.isFirefox) {
 					this.recordVideo.getDataURL(function(videoDataURL) {
-						this.postFiles(audioDataURL, videoDataURL);
+						this.postFiles(audioDataURL, videoDataURL, this.actions);
+						this.forceUpdate();
 					}.bind(this));
 				} else {
-					this.postFiles(audioDataURL);
+					this.postFiles(audioDataURL, null, this.actions);
 				}
 			}.bind(this));
 		}.bind(this);
 
-		this.state.recording = false;
 
 		this.recordAudio.stopRecording(function() {
 			if (this.isFirefox) onStopRecording();
@@ -280,15 +295,20 @@ const VideoReviews = React.createClass({
 
 	},
 
-	postFiles: function(audioDataURL, videoDataURL) {
-		const fileName = getRandomString();
+	postFiles: function(audioDataURL, videoDataURL, actions) {
+
+		const fileName = new Rwg().generate();
 		const files = { };
+
+		console.log('filename is' + fileName);
 
 		files.audio = {
 			name: fileName + (this.isFirefox ? '.webm' : '.wav'),
 			type: this.isFirefox ? 'video/webm' : 'audio/wav',
 			contents: audioDataURL
 		};
+
+		files.actions = actions;
 
 		if (!this.isFirefox) {
 			files.video = {
@@ -317,16 +337,19 @@ const VideoReviews = React.createClass({
 	},
 
 	render: function() {
+		console.log('RE-RENDERINGGG');
 		return (
-			<div style={styles.wrapper}>
-				<p>
-					<video id="camera-preview" ref={(ref) => this.cameraPreview = ref} controls style={styles.preview}></video>
-				</p><hr />
-
-				<div>
-					<button id="start-recording" onClick={this.startActionRecording}>Start Recording</button>
-					<button id="stop-recording" onClick={this.stopActionRecording}>Stop Recording</button>
-					<button id="stop-recording" onClick={this.fetchRecording}>Fetch Recording</button>
+			<div>
+				<div ref={(ref) => this.mouseElem = ref} style={styles.mouse}/>
+				<div style={styles.wrapper}>
+					<p style={styles.camera(this.state.recording)}>
+						<video id="camera-preview" ref={(ref) => this.cameraPreview = ref} controls style={styles.preview}></video>
+					</p>
+					<div>
+						<button id="start-recording" onClick={this.startRecording}>Start</button>
+						<button id="stop-recording" onClick={this.stopRecording}>Stop</button>
+						<button id="stop-recording" onClick={this.fetchRecording}>Play</button>
+					</div>
 				</div>
 			</div>
 		);
@@ -334,6 +357,15 @@ const VideoReviews = React.createClass({
 });
 
 styles = {
+	camera: function(recording) {
+		const cameraStyle = {};
+		if (recording) {
+			cameraStyle.display = 'block';
+		} else {
+			cameraStyle.display = 'none';
+		}
+		return cameraStyle;
+	},
 	preview: {
 		border: '1px solid rgb(15, 158, 238)',
 		width: '94%'
@@ -341,10 +373,19 @@ styles = {
 	wrapper: {
 		position: 'fixed',
 		top: '0px',
-		left: '0px',
-		width: '500px',
-		height: '500px',
+		left: 'calc(60vw - 350px)',
+		width: '350px',
+		height: '350px',
 		zIndex: '10000000'
+	},
+	mouse: {
+		position: 'absolute',
+		top: '50px',
+		left: '50px',
+		width: '20px',
+		height: '20px',
+		zIndex: '1000000000',
+		backgroundColor: 'red'
 	},
 };
 

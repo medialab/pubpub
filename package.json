@@ -147,6 +147,8 @@
     "redux": "^3.0.4",
     "redux-form": "^3.0.12",
     "redux-router": "1.0.0-beta5",
+    "recordrtc": "^5.2.4",
+    "recordrtc-nodejs": "^1.0.0",
     "request": "^2.65.0",
     "scroll-behavior": "^0.3.0",
     "sendgrid": "^2.0.0",

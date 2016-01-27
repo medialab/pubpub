@@ -78,6 +78,7 @@ module.exports = {
   },
   module: {
     loaders: [
+					 { test: /index\.js$/, include: /.*\/src\/components\/EditorPluginsNew\/.*\/index\.js/, loader: 'promise-loader?bluebird' },
       { test: /\.jsx?$/, exclude: /node_modules/, loaders: ['babel?' + JSON.stringify(babelLoaderQuery), 'eslint-loader']},
       { test: /\.json$/, loader: 'json-loader' },
       { test: /\.woff(\?v=\d+\.\d+\.\d+)?$/, loader: "url?limit=10000&mimetype=application/font-woff" },
@@ -109,6 +110,6 @@ module.exports = {
       __DEVELOPMENT__: true,
       __DEVTOOLS__: true  // <-------- DISABLE redux-devtools HERE
     }),
-    webpackIsomorphicToolsPlugin.development()
+    webpackIsomorphicToolsPlugin.development(),
   ]
 };

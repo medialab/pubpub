@@ -1,7 +1,9 @@
 import React, {PropTypes} from 'react';
-import ErrorMsg from './ErrorPlugin';
-import {Reference} from '../';
-import createPubPubPlugin from './PubPub';
+import ErrorMsg from '../ErrorPlugin';
+import {Reference} from '../../';
+import createPubPubPlugin from '../PubPub';
+
+console.log('WE LOADED THE CITE PLUGIN');
 
 let styles = {};
 
@@ -22,7 +24,8 @@ const CiteConfig = {
 		}
 		pluginProps.count = globals.citationCount;
 		return {globals, pluginProps};
-	}
+	},
+	highlight: 'rgba(245, 245, 169, 0.5)'
 };
 
 // let styles =

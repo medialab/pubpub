@@ -15,6 +15,14 @@ import InputFields from '../components/EditorPluginFields/index';
 
 import MathComponent from './MathComponent';
 
+const plugins = {};
+for (const pluginName in Plugins) {
+	if (Plugins.hasOwnProperty(pluginName)) {
+		Plugins[pluginName].then(function(plugin) {
+			plugins[pluginName] = plugin;
+		});
+	}
+}
 
 const MathOptions = {
 	inlineOpen: '$$',
@@ -65,7 +73,7 @@ const PPMComponent = React.createClass({
 				console.log('This shouldnt happen!!');
 			}
 			const pluginName = children[0].split(':')[0];
-			const plugin = Plugins[pluginName];
+			const plugin = plugins[pluginName];
 			if (!plugin) {
 				console.warn('Could not find a plugin');
 				return <span {...props}>{children}</span>;

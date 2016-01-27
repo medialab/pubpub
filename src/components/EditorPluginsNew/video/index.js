@@ -1,7 +1,9 @@
 import React, {PropTypes} from 'react';
-import Media from './baseMediaPlugin';
-import createPubPubPlugin from './PubPub';
-import ErrorMsg from './ErrorPlugin';
+import Media from '../baseMediaPlugin';
+import createPubPubPlugin from '../PubPub';
+import ErrorMsg from '../ErrorPlugin';
+
+console.log('WE LOADED THE VIDEO PLUGIN');
 
 const VideoInputFields = [
 	{title: 'source', type: 'asset', params: {assetType: 'video'}},
@@ -15,7 +17,8 @@ const VideoInputFields = [
 const VideoConfig = {
 	title: 'video',
 	inline: true,
-	autocomplete: true
+	autocomplete: true,
+	highlight: 'rgba(158, 219, 176, 0.5)'
 };
 
 let styles = {};

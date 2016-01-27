@@ -1,7 +1,9 @@
 import React, {PropTypes} from 'react';
 import ImageLoader from 'react-imageloader';
-import Media from './baseMediaPlugin';
-import createPubPubPlugin from './PubPub';
+import Media from '../baseMediaPlugin';
+import createPubPubPlugin from '../PubPub';
+
+console.log('WE LOADED THE IMAGE PLUGIN');
 
 const ImageInputFields = [
 	{title: 'source', type: 'asset', params: {assetType: 'image'}},
@@ -15,7 +17,8 @@ const ImageInputFields = [
 const ImageConfig = {
 	title: 'image',
 	inline: true,
-	autocomplete: true
+	autocomplete: true,
+	highlight: 'rgba(185, 215, 249, 0.5)'
 };
 
 // let styles = {};

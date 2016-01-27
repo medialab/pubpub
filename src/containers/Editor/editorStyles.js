@@ -1,5 +1,14 @@
 import {globalStyles} from '../../utils/styleConstants';
 
+import Plugins from '../../components/EditorPluginsNew/index.js';
+const plugins = {};
+for (const pluginName in Plugins) {
+	if (Plugins.hasOwnProperty(pluginName)) {
+		Plugins[pluginName].then(function(plugin) {
+			plugins[pluginName] = plugin;
+		});
+	}
+}
 
 export const styles = {
 	editorContainer: {
@@ -14,7 +23,6 @@ export const styles = {
 	},
 	editorContainerDark: {
 		backgroundColor: '#272727',
-
 	},
 	errorTitle: {
 		textAlign: 'center',
@@ -350,7 +358,7 @@ export function codeMirrorStyles(loginData) {
 		break;
 	}
 
-	return {
+	const pluginStyles = {
 		'.CodeMirror': {
 			backgroundColor: 'transparent',
 			fontSize: editorStyles.fontSize,
@@ -410,25 +418,33 @@ export function codeMirrorStyles(loginData) {
 			color: editorStyles.colorPagebreak,
 			fontSize: '16px',
 		},
-		'.cm-plugin-image': {
-			backgroundColor: 'rgba(185, 215, 249, 0.5)',
-		},
-		'.cm-plugin-video': {
-			backgroundColor: 'rgba(158, 219, 176, 0.5)',
-		},
-		'.cm-plugin-audio': {
-			backgroundColor: 'rgba(233, 201, 153, 0.5)',
-		},
-		'.cm-plugin-table': {
-			backgroundColor: 'rgba(211, 172, 223, 0.5)',
-		},
-		'.cm-plugin-cite': {
-			backgroundColor: 'rgba(245, 245, 169, 0.5)',
-		},
-		'.cm-plugin-quote': {
-			backgroundColor: 'rgba(245, 245, 169, 0.5)',
-		},
+		// '.cm-plugin-image': {
+		//	backgroundColor: 'rgba(185, 215, 249, 0.5)',
+		// },
+		// '.cm-plugin-video': {
+		//	backgroundColor: 'rgba(158, 219, 176, 0.5)',
+		// },
+		// '.cm-plugin-audio': {
+		//	backgroundColor: 'rgba(233, 201, 153, 0.5)',
+		// },
+		// '.cm-plugin-table': {
+		//	backgroundColor: 'rgba(211, 172, 223, 0.5)',
+		// },
+		// '.cm-plugin-cite': {
+		//	backgroundColor: 'rgba(245, 245, 169, 0.5)',
+		// },
+		// '.cm-plugin-quote': {
+		//	backgroundColor: 'rgba(245, 245, 169, 0.5)',
+		// },
 	};
+	for (const pluginName in plugins) {
+		if (plugins.hasOwnProperty(pluginName)) {
+			pluginStyles['.cm-plugin-' + pluginName] = {
+				backgroundColor: plugins[pluginName].Config.highlight || 'rgba(185, 215, 249, 0.5)'
+			};
+		}
+	}
+	return pluginStyles;
 }
 
 // // Function to generate side-list fade in animations.

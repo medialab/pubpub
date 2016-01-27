@@ -12,6 +12,15 @@ let styles = {};
 const POPUP_WIDTH = 425;
 const POPUP_HEIGHT_ESTIMATE = 350;
 
+const plugins = {};
+for (const pluginName in Plugins) {
+	if (Plugins.hasOwnProperty(pluginName)) {
+		Plugins[pluginName].then(function(plugin) {
+			plugins[pluginName] = plugin;
+		});
+	}
+}
+
 const EditorPluginPopup = React.createClass({
 	propTypes: {
 		activeFocus: PropTypes.string,
@@ -100,7 +109,7 @@ const EditorPluginPopup = React.createClass({
 		this.popupBox.focus();
 	},
 	focusFields: function() {
-		const firstRefName = Plugins[this.state.pluginType].InputFields[0].title;
+		const firstRefName = plugins[this.state.pluginType].InputFields[0].title;
 		const firstRef = (firstRefName) ? this.popupInputFields[firstRefName] : null;
 		if (firstRef && typeof firstRef.focus === 'function') {
 			const focused = firstRef.focus();
@@ -192,7 +201,7 @@ const EditorPluginPopup = React.createClass({
 	createPluginString: function(pluginType) {
 		let outputVariables = '';
 
-		const PluginInputFields = Plugins[pluginType].InputFields;
+		const PluginInputFields = plugins[pluginType].InputFields;
 
 		for (const pluginInputField of PluginInputFields) {
 			// Generate an output string based on the key, values in the object
@@ -212,8 +221,7 @@ const EditorPluginPopup = React.createClass({
 	},
 
 	render: function() {
-
-		const PluginInputFields = (this.state.pluginType) ? Plugins[this.state.pluginType].InputFields : [];
+		const PluginInputFields = (this.state.pluginType) ? plugins[this.state.pluginType].InputFields : [];
 
 		return (
 			<div id="plugin-popup"

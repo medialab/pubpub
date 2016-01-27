@@ -1,7 +1,9 @@
 import React, {PropTypes} from 'react';
-import Media from './baseMediaPlugin';
-import createPubPubPlugin from './PubPub';
-import {Reference} from '../';
+import Media from '../baseMediaPlugin';
+import createPubPubPlugin from '../PubPub';
+import {Reference} from '../../';
+
+console.log('WE LOADED THE QUOTE PLUGIN');
 
 
 const QuoteInputFields = [
@@ -15,7 +17,8 @@ const QuoteInputFields = [
 const QuoteConfig = {
 	title: 'quote',
 	inline: true,
-	autocomplete: true
+	autocomplete: true,
+	highlight: 'rgba(245, 245, 169, 0.5)'
 };
 
 

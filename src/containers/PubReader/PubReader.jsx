@@ -47,7 +47,7 @@ const PubReader = React.createClass({
 	statics: {
 		fetchDataDeferred: function(getState, dispatch, location, routeParams) {
 			if (getState().pub.getIn(['pubData', 'slug']) !== routeParams.slug) {
-				return dispatch(getPub(routeParams.slug, getState().journal.getIn(['journalData', '_id']) ));
+				return dispatch(getPub(routeParams.slug, getState().journal.getIn(['journalData', '_id']), location.query.referrer ));
 			}
 			return dispatch(pubNavIn());
 		}
@@ -179,7 +179,7 @@ const PubReader = React.createClass({
 				{name: 'twitter:description', content: pubData.history[versionIndex].abstract},
 			];
 
-			const srcRegex = /{{image:.*(src=([^\s,]*)).*}}/;
+			const srcRegex = /{{image:.*(source=([^\s,]*)).*}}/;
 			const match = srcRegex.exec(pubData.history[versionIndex].markdown);
 			const refName = match ? match[2] : undefined;
 
@@ -236,7 +236,7 @@ const PubReader = React.createClass({
 					<PubNav
 						height={this.height}
 						openPubModalHandler={this.openPubModal}
-						status={this.props.readerData.get('status')}
+						status={pubData.history[0].markdown ? this.props.readerData.get('status') : 'loading'}
 						slug={this.props.slug}
 						isAuthor={pubData.isAuthor}
 						pubStatus={pubData.status}

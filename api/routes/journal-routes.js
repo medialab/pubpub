@@ -46,7 +46,7 @@ app.post('/createJournal', function(req,res){
 app.get('/getJournal', function(req,res){
 	Journal.findOne({subdomain: req.query.subdomain})
 	.populate({path: "pubs", select:"title abstract slug settings"})
-	.populate({path: "pubsFeatured", select:"title abstract slug settings"})
+	.populate({path: "pubsFeatured", select:"title abstract slug settings createDate lastUpdated discussions"})
 	.populate({path: "pubsSubmitted", select:"title abstract slug settings"})
 	.populate({path: "admins", select:"name username thumbnail firstName lastName"})
 	.populate({path: "collections.pubs", select:"title abstract slug authors lastUpdated createDate"})
@@ -143,8 +143,17 @@ app.post('/submitPubToJournal', function(req,res){
 		}
 
 		if (String(journal.pubsSubmitted).indexOf(req.body.pubID) === -1) {
-			journal.pubsSubmitted.push(req.body.pubID);
+			
 			Pub.addJournalSubmitted(req.body.pubID, req.body.journalID, req.user._id);
+
+			if (journal.autoFeature) {
+				journal.pubsFeatured.push(req.body.pubID);
+				Pub.addJournalFeatured(req.body.pubID, req.body.journalID, null);
+			} else {
+				journal.pubsSubmitted.push(req.body.pubID);
+			}
+
+
 		}
 
 		journal.save(function(err, result){
@@ -178,7 +187,7 @@ app.get('/loadJournalAndLogin', function(req,res){
 	// When an implicit login request is made using the cookie
 	Journal.findOne({ $or:[ {'subdomain':req.query.host.split('.')[0]}, {'customDomain':req.query.host}]})
 	.populate({path: "pubs", select:"title abstract slug settings"})
-	.populate({path: "pubsFeatured", select:"title abstract slug settings"})
+	.populate({path: "pubsFeatured", select:"title abstract slug settings createDate lastUpdated discussions"})
 	.populate({path: "pubsSubmitted", select:"title abstract slug settings"})
 	.populate({path: "admins", select:"name firstName lastName username thumbnail"})
 	.populate({path: "collections.pubs", select:"title abstract slug authors lastUpdated createDate"})

@@ -9,6 +9,7 @@ import {scienceStyle, magazineStyle} from './pubStyles';
 import cssConvert from '../../utils/cssToRadium';
 import ResizingText from './ResizingText';
 import dateFormat from 'dateformat';
+import {License} from '../';
 
 import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
@@ -200,6 +201,12 @@ const PubBody = React.createClass({
 						: null
 					}
 
+					{this.props.isFeatured && !this.props.errorView
+						? <License />
+						: null
+					}
+					
+					
 				</div>
 
 			</div>
@@ -223,6 +230,9 @@ styles = {
 		lineHeight: '1.58',
 		textRendering: 'optimizeLegibility',
 		WebkitFontSmoothing: 'antialiased',
+		'@media screen and (min-resolution: 3dppx), screen and (max-width: 767px)': {
+			padding: '0px 1em 50px',
+		},
 	},
 	loading: {
 		opacity: 0,

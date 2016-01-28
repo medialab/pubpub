@@ -1,25 +1,23 @@
-var app = require('../api');
-
-var User = require('../models').User;
-var Pub = require('../models').Pub;
-var Journal = require('../models').Journal;
+import app from '../api';
+import {User, Pub, Journal} from '../models';
 
 import {cloudinary} from '../services/cloudinary';
+import {sendInviteEmail} from '../services/emails';
 
 app.get('/getUser', function(req, res) {
 	const userID = req.user ? req.user._id : undefined;
-	
+
 	User.getUser(req.query.username, userID, (err, userData)=>{
-		
+
 		if (err) {
 			console.log(err);
-			return res.status(500).json(err); 
+			return res.status(500).json(err);
 		}
 
 		return res.status(201).json(userData);
 
 	});
-  
+
 });
 
 app.post('/updateUser', function(req, res) {
@@ -38,9 +36,13 @@ app.post('/updateUser', function(req, res) {
 		}
 
 		if (req.body.newDetails.image) {
-			cloudinary.uploader.upload(req.body.newDetails.image, function(cloudinaryResponse) { 
-				const thumbnail = cloudinaryResponse.url.replace('/upload', '/upload/c_limit,h_50,w_50'); 
-				
+			cloudinary.uploader.upload(req.body.newDetails.image, function(cloudinaryResponse) {
+
+				const thumbnail = cloudinaryResponse.url ? cloudinaryResponse.url.replace('/upload', '/upload/c_limit,h_50,w_50') : req.body.newDetails.image;
+				if (!cloudinaryResponse.url) {
+					console.log('cloudinaryResponse did not have url. Here is the response:');
+					console.log(cloudinaryResponse);
+				}
 				user.thumbnail = thumbnail;
 				outputObject.thumbnail = thumbnail;
 				user.save(function(err, result){
@@ -54,20 +56,20 @@ app.post('/updateUser', function(req, res) {
 				// console.log('outputObject', outputObject);
 				return res.status(201).json(outputObject);
 			});
-			
+
 		}
 	});
-  
+
 });
 
 app.post('/updateUserSettings', function(req, res) {
 	const settingKey = Object.keys(req.body.newSettings)[0];
 
 	User.findById(req.user._id, function(err, user){
-		
+
 		if (err) {
 			console.log(err);
-			return res.status(500).json(err); 
+			return res.status(500).json(err);
 		}
 
 		user.settings = user.settings ?  user.settings : {};
@@ -103,10 +105,10 @@ app.post('/follow', function(req, res) {
 		Journal.update({ _id: req.body.followedID }, { $addToSet: { followers: userID} }, function(err, result){if(err) return handleError(err)});
 		return res.status(201).json(req.body);
 
-	default: 
-		return res.status(500).json('Invalid type');	
+	default:
+		return res.status(500).json('Invalid type');
 	}
-	
+
 });
 
 app.post('/unfollow', function(req, res) {
@@ -130,10 +132,54 @@ app.post('/unfollow', function(req, res) {
 		Journal.update({ _id: req.body.followedID }, { $pull: { followers: userID} }, function(err, result){if(err) return handleError(err)});
 		return res.status(201).json(req.body);
 
-	default: 
-		return res.status(500).json('Invalid type');	
+	default:
+		return res.status(500).json('Invalid type');
 	}
-		
-	
+
+
 });
 
+
+app.post('/inviteReviewers', function(req, res) {
+	const inviteData = req.body.inviteData;
+	const pubId = req.body.pubID;
+	Pub.getSimplePub(pubId, function(err, pub) {
+
+		if (err) {res.status(500); }
+		const senderName = req.user ? req.user.name : 'An anonymous user';
+		const pubName = pub.title;
+		
+
+		Journal.findByHost(req.query.host, function(err, journ) {
+			
+			const journalName = journ ? journ.journalName : 'PubPub';
+			let journalURL = '';
+			if (journ) {
+				journalURL = journ.customDomain ? 'http://' + journ.customDomain : 'http://' + journ.subdomain + '.pubpub.org';
+			} else {
+				journalURL = 'http://www.pubpub.org'
+			}
+
+			const journalIntroduction = journ ? journalName + ' is a journal built on PubPub:' : 'PubPub is';
+
+			const pubURL = journalURL + '/pub/' + pub.slug;
+
+			for (let recipient of inviteData) {
+				const recipientEmail = recipient.email;
+				const emailCallback = function(error, email) {
+					if (err) {
+						console.log(error);	
+					}
+					// console.log(email);
+				};
+				sendInviteEmail(senderName, pubName, pubURL, journalName, journalURL, journalIntroduction, recipientEmail, emailCallback);
+
+			}
+
+			res.status(201).json({});
+		});
+
+	});
+
+
+});

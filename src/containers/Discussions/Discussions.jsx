@@ -51,13 +51,13 @@ const Discussions = React.createClass({
 			discussionObject.pub = this.props.editorData.getIn(['pubEditData', '_id']);
 			discussionObject.version = this.props.query.version !== undefined && this.props.query.version > 0 && this.props.query.version < (this.props.editorData.getIn(['pubEditData', 'history']).size - 1) ? this.props.query.version : this.props.editorData.getIn(['pubEditData', 'history']).size;
 			discussionObject.selections = this.props.editorData.getIn(['newDiscussionData', 'selections']);
-			console.log('about to dispatch addComment ', discussionObject, activeSaveID);
+			// console.log('about to dispatch addComment ', discussionObject, activeSaveID);
 			this.props.dispatch(addComment(discussionObject, activeSaveID));
 		} else {
 			discussionObject.pub = this.props.pubData.getIn(['pubData', '_id']);
 			discussionObject.version = this.props.query.version !== undefined && this.props.query.version > 0 && this.props.query.version < (this.props.pubData.getIn(['pubData', 'history']).size - 1) ? this.props.query.version : this.props.pubData.getIn(['pubData', 'history']).size;
 			discussionObject.selections = this.props.pubData.getIn(['newDiscussionData', 'selections']);
-			console.log('about to dispatch addDiscussion ', discussionObject, activeSaveID);
+			// console.log('about to dispatch addDiscussion ', discussionObject, activeSaveID);
 			this.props.dispatch(addDiscussion(discussionObject, activeSaveID));	
 		}
 		
@@ -81,13 +81,17 @@ const Discussions = React.createClass({
 				if (discussions[index]._id === searchID) {
 					return discussions[index];
 				} else if (discussions[index].children && discussions[index].children.length) {
-					return findDiscussionRoot(discussions[index].children, searchID);
+					const foundChild = findDiscussionRoot(discussions[index].children, searchID);
+					if (foundChild) {
+						return foundChild;
+					}
 				}
 			}
 		}
 
 		// const pubData = this.getDiscussionData();
-		return [findDiscussionRoot(discussionsData, this.props.metaID)];
+		const output = [findDiscussionRoot(discussionsData, this.props.metaID)];
+		return output;
 	},
 
 	getDiscussionData: function() {
@@ -125,6 +129,10 @@ const Discussions = React.createClass({
 			<div style={styles.container}>
 				
 				<div className="pub-discussions-wrapper" style={rightBarStyles.sectionWrapper}>
+					{this.props.pubData.getIn(['pubData', 'referrer', 'name'])
+						? <div>{this.props.pubData.getIn(['pubData', 'referrer', 'name'])} invites you to comment!</div>
+						: null
+					}
 					
 					{this.props.metaID || (!this.props.editorCommentMode && this.props.inEditor)
 						? null
@@ -141,6 +149,7 @@ const Discussions = React.createClass({
 					
 					{
 						discussionsData.map((discussion)=>{
+							// console.log(discussion);
 							return (<DiscussionsItem 
 								key={discussion._id}
 								slug={this.props.slug}

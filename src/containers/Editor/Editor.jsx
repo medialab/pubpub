@@ -21,7 +21,7 @@ import initCodeMirrorMode from './editorCodeMirrorMode';
 import {styles, codeMirrorStyles} from './editorStyles';
 import {globalStyles} from '../../utils/styleConstants';
 
-import {insertText, createFocusDoc} from './editorCodeFunctions';
+import {insertText, createFocusDoc, addCodeMirrorKeys} from './editorCodeFunctions';
 import {editorDefaultText} from './editorDefaultText';
 
 import SHA1 from 'crypto-js/sha1';
@@ -70,6 +70,7 @@ const Editor = React.createClass({
 
 	getInitialState() {
 		return {
+			initialized: false,
 			tree: [],
 			travisTOC: [],
 			travisTOCFull: [],
@@ -93,49 +94,10 @@ const Editor = React.createClass({
 			// loadCss('/css/react-select.min.css');
 			initCodeMirrorMode();
 
-			// Load Firebase and bind using ReactFireMixin. For assets, references, etc.
-			const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData' );
-			this.bindAsObject(ref, 'firepadData');
-
-			// Load Firebase ref that is used for firepad
-			const firepadRef = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/firepad');
-
-			// Load codemirror
-			const codeMirror = CodeMirror(document.getElementById('codemirror-wrapper'), cmOptions);
-			this.cm = codeMirror;
-
-			// Get Login username for firepad use. Shouldn't be undefined, but set default in case.
-			const username = (this.props.loginData.get('loggedIn') === false) ? 'cat' : this.props.loginData.getIn(['userData', 'username']);
-
-			// Initialize Firepad using codemirror and the ref defined above.
-			const firepad = Firepad.fromCodeMirror(firepadRef, codeMirror, {
-				userId: username,
-				defaultText: editorDefaultText(this.props.pubData.getIn(['createPubData', 'title']))
-			});
-
-			new Firebase('https://pubpub.firebaseio.com/.info/connected').on('value', (connectedSnap)=> {
-				if (connectedSnap.val() === true) {
-					/* we're connected! */
-					this.setState({editorSaveStatus: 'saved'});
-				} else {
-					/* we're disconnected! */
-					this.setState({editorSaveStatus: 'disconnected'});
-				}
-			});
-
-			FirepadUserList.fromDiv(firepadRef.child('users'),
-				document.getElementById('userlist'), username, this.props.loginData.getIn(['userData', 'name']), this.props.loginData.getIn(['userData', 'thumbnail']));
-
-			firepad.on('synced', (synced)=>{
-				// console.log('before debounce', synced);
-				debounce(()=> {
-					this.updateSaveStatus(synced);
-				}, 250)();
-			});
-
-			// need to unmount on change
-			codeMirror.on('change', this.onEditorChange);
-
+			if (this.props.editorData.getIn(['pubEditData', 'token'])) {
+				this.initializeEditorData(this.props.editorData.getIn(['pubEditData', 'token']));
+			}
+			
 		}
 	},
 
@@ -143,11 +105,70 @@ const Editor = React.createClass({
 		if (nextProps.editorData.get('publishSuccess')) {
 			this.props.dispatch(pushState(null, ('/pub/' + nextProps.slug)));
 		}
+		if (!this.state.initialized && nextProps.editorData.getIn(['pubEditData', 'token'])) {
+			this.initializeEditorData(nextProps.editorData.getIn(['pubEditData', 'token']));
+		}
+
 	},
 
 	componentWillUnmount() {
 		this.props.dispatch(closeModal());
 		this.props.dispatch(unmountEditor());
+	},
+
+	initializeEditorData: function(token) {
+		// Load Firebase and bind using ReactFireMixin. For assets, references, etc.
+		const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData' );
+		ref.authWithCustomToken(token, (error, authData)=> {
+			if (error) {
+				console.log('Authentication Failed!', error);
+			} else {
+				this.bindAsObject(ref, 'firepadData');
+
+				// Load Firebase ref that is used for firepad
+				const firepadRef = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/firepad');
+
+				// Load codemirror
+				const codeMirror = CodeMirror(document.getElementById('codemirror-wrapper'), cmOptions);
+				this.cm = codeMirror;
+
+				// Get Login username for firepad use. Shouldn't be undefined, but set default in case.
+				const username = (this.props.loginData.get('loggedIn') === false) ? 'cat' : this.props.loginData.getIn(['userData', 'username']);
+
+				// Initialize Firepad using codemirror and the ref defined above.
+				const firepad = Firepad.fromCodeMirror(firepadRef, codeMirror, {
+					userId: username,
+					defaultText: editorDefaultText(this.props.pubData.getIn(['createPubData', 'title']))
+				});
+
+				new Firebase('https://pubpub.firebaseio.com/.info/connected').on('value', (connectedSnap)=> {
+					if (connectedSnap.val() === true) {
+						/* we're connected! */
+						this.setState({editorSaveStatus: 'saved'});
+					} else {
+						/* we're disconnected! */
+						this.setState({editorSaveStatus: 'disconnected'});
+					}
+				});
+
+				FirepadUserList.fromDiv(firepadRef.child('users'),
+					document.getElementById('userlist'), username, this.props.loginData.getIn(['userData', 'name']), this.props.loginData.getIn(['userData', 'thumbnail']));
+
+				firepad.on('synced', (synced)=>{
+					// console.log('before debounce', synced);
+					debounce(()=> {
+						this.updateSaveStatus(synced);
+					}, 250)();
+				});
+
+				// need to unmount on change
+				codeMirror.on('change', this.onEditorChange);
+				addCodeMirrorKeys(codeMirror);
+
+				this.setState({initialized: true});
+			}
+		});
+
 	},
 
 	getActiveCodemirrorInstance: function() {
@@ -157,6 +178,7 @@ const Editor = React.createClass({
 
 		return cm;
 	},
+
 
 	showPopupFromAutocomplete: function(completion) { // completion, element
 		const cords = this.cm.cursorCoords();
@@ -179,7 +201,7 @@ const Editor = React.createClass({
 
 	onEditorChange: function(cm, change) {
 
-		const start = performance.now();
+		// const start = performance.now();
 		CodeMirror.commands.autocomplete(cm, CodeMirror.hint.plugins, {completeSingle: false});
 
 		if (cm.state.completionActive && cm.state.completionActive.data) {
@@ -191,36 +213,36 @@ const Editor = React.createClass({
 		// This feels inefficient.
 		// An alternative is that we don't pass a trimmed version of the text to the markdown processor.
 		// Instead we define header plugins and pass the entire thing to both here and body.
-		const markdownStart = performance.now();
+		// const markdownStart = performance.now();
 		const fullMD = cm.getValue();
-		const markdownGrab = performance.now();
+		// const markdownGrab = performance.now();
 		const titleRE = /\{\{title:(.*?)\}\}/i;
 		const titleMatch = fullMD.match(titleRE);
 		const title = titleMatch && titleMatch.length ? titleMatch[1].trim() : '';
-		const titleGrabAndSet = performance.now();
+		// const titleGrabAndSet = performance.now();
 
 		const abstractRE = /\{\{abstract:(.*?)\}\}/i;
 		const abstractMatch = fullMD.match(abstractRE);
 		const abstract = abstractMatch && abstractMatch.length ? abstractMatch[1].trim() : '';
-		const abstractGrabAndSet = performance.now();
+		// const abstractGrabAndSet = performance.now();
 
 		const authorsNoteRE = /\{\{authorsNote:(.*?)\}\}/i;
 		const authorsNoteMatch = fullMD.match(authorsNoteRE);
 		const authorsNote = authorsNoteMatch && authorsNoteMatch.length ? authorsNoteMatch[1].trim() : '';
-		const aNGrabAndSet = performance.now();
+		// const aNGrabAndSet = performance.now();
 
 		const assets = convertFirebaseToObject(this.state.firepadData.assets);
 		const references = convertFirebaseToObject(this.state.firepadData.references, true);
 		const selections = [];
 		const markdown = fullMD.replace(/\{\{title:.*?\}\}/g, '').replace(/\{\{abstract:.*?\}\}/g, '').replace(/\{\{authorsNote:.*?\}\}/g, '').trim();
-		const removeTitleEtc = performance.now();
-		let compiledMarkdown = 0;
-		let saveState = 0;
+		// const removeTitleEtc = performance.now();
+		// let compiledMarkdown = 0;
+		// let saveState = 0;
 
 		try {
 
 			const mdOutput = marked(markdown, {assets, references, selections});
-			compiledMarkdown = performance.now();
+			// compiledMarkdown = performance.now();
 			this.setState({
 				tree: mdOutput.tree,
 				travisTOC: mdOutput.travisTOC,
@@ -230,7 +252,7 @@ const Editor = React.createClass({
 				abstract: abstract,
 				authorsNote: authorsNote,
 			});
-			saveState = performance.now();
+			// saveState = performance.now();
 		} catch (err) {
 			console.log('Compiling error: ', err);
 			this.setState({
@@ -247,7 +269,7 @@ const Editor = React.createClass({
 		// console.log('anGrab', aNGrabAndSet - start, aNGrabAndSet - abstractGrabAndSet);
 		// console.log('removeTitleEtc', removeTitleEtc - start, removeTitleEtc - aNGrabAndSet);
 		// console.log('compiledMarkdown', compiledMarkdown - start, compiledMarkdown - removeTitleEtc);
-		console.log('saveState', saveState - start, saveState - compiledMarkdown);
+		// console.log('saveState', saveState - start, saveState - compiledMarkdown);
 		// console.log('~~~~~~~~~~~~~~~~~~');
 		// const end = performance.now();
 		// console.log('timing = ', end - start);
@@ -297,14 +319,15 @@ const Editor = React.createClass({
 		}
 
 		// pHashes are generated and collected to perform discussion highlight synchronization
-		const pTags = document.querySelectorAll('div#pubBodyContent>div');
+		const pTags = document.querySelectorAll('.mainRenderBody .p-block');
+		// console.log(pTags);
 		const pHashes = {};
 		for ( const key in pTags ) {
 			if (pTags.hasOwnProperty(key)) {
-				// pHashes[parseInt(key, 10) + 1] = SHA1(pTags[key].innerText).toString(encHex);
 				pHashes[SHA1(pTags[key].innerText).toString(encHex)] = parseInt(key, 10) + 1;
 			}
 		}
+
 		// console.log(pHashes);
 
 		const newVersion = {
@@ -396,9 +419,7 @@ const Editor = React.createClass({
 	insertFormatting: function(formatting) {
 		return ()=>{
 			const cm = this.getActiveCodemirrorInstance();
-			const currentSelection = cm.getSelection();
-			const baseText = currentSelection !== '' ? currentSelection : 'example';
-			insertText(cm, formatting, baseText, this.showPopupFromAutocomplete);
+			insertText(cm, formatting, this.showPopupFromAutocomplete);
 			this.toggleFormatting();
 		};
 	},
@@ -755,7 +776,9 @@ const Editor = React.createClass({
 										{this.renderNav(false)}
 										
 										<div className="editorBodyView" style={[styles.previewBlockWrapper, this.state.previewPaneMode === 'preview' && styles.previewBlockWrapperShow]}>
-											{this.renderBody()}
+											<div className={'mainRenderBody'}>
+												{this.renderBody()}
+											</div>
 										</div>
 
 										<div style={[styles.previewBlockWrapper, this.state.previewPaneMode === 'comments' && styles.previewBlockWrapperShow]}>

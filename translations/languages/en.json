@@ -23,6 +23,7 @@
   "editor.publishMessage1": "You can publish versions to your Pub as frequently as you like.",
   "editor.publishMessage2": "We encourage you to publish early and often.",
   "editor.publishMessage3": "The full history will be maintained and accessible.",
+  "editor.publishMessage5": "By publishing, you agree to a Creative Commons By license for your work.",
   "editor.publishMessageJournal1": "Publishing will automatically submit this pub to: {currentJournal}.",
   "editor.publishMessageJournal2": "If you would like to publish without submitting, please publish from",
   "editor.publishMessage4": "A description is required.",
@@ -59,6 +60,7 @@
   "journal.landingPageComponents": "Landing Page Components",
   "journal.addNewAdmin": "Add new admin",
   "journal.customDomain": "Custom Domain",
+  "journal.autoFeature": "Automatically Feature Pubs on Submission",
   "login.firstName": "First Name",
   "login.lastName": "Last Name",
   "login.chooseNew": "choose new image",
@@ -74,6 +76,7 @@
   "pub.deletions": "deletions",
   "pub.viewChanges": "View Changes",
   "pub.readAtThisPoint": "Read pub at this point",
+  "pubMeta.inviteMessage": "Do you know someone who might have a have an interesting opinion on this paper? Invite them to join the discussion! We will send them a message and help them create accounts.",
   "pub.searchJournals": "Search Journals to Submit to",
   "pub.journalSubmissions": "Journal Submissions",
   "pub.noSubmissions": "Not submitted to any Journals",
@@ -201,5 +204,6 @@
   "global.off": "Off",
   "editorCommentsText0": "You are commenting on a draft version of this Pub.",
   "editorCommentsText1": "This section can only be used by collaborators and is private. It is never published or made public.",
-  "EditorComments": "Editor Comments"
+  "EditorComments": "Editor Comments",
+  "discussionPlaceholder": "Add discussion or feedback"
 }

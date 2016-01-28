@@ -68,10 +68,12 @@ const PubSelectionPopup = React.createClass({
 		const range = selection.getRangeAt(0);
 		// console.log(range);
 		// console.log(range.commonAncestorContainer);
+
 		if (!selection.isCollapsed && isDescendantOfP(range.commonAncestorContainer)) {
 
 			// Rangy.getSelection().expand('word');
 			const ancestorText = getAncestorText(range.commonAncestorContainer);
+			// console.log(ancestorText);
 			this.setState({
 				popupVisible: true,
 				xLoc: clickX,
@@ -95,6 +97,7 @@ const PubSelectionPopup = React.createClass({
 	onHighlightSave: function() {
 		const renderer = new Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
 		const result = renderer.renderWithRange(this.state.range);
+
 		const highlightObject = {
 			text: this.state.selectionText,
 			context: this.state.ancestorText,

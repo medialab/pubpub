@@ -6,6 +6,7 @@ import PureRenderMixin from 'react-addons-pure-render-mixin';
 import {getPub, pubNavIn} from '../../actions/pub';
 // import {toggleVisibility} from '../../actions/login';
 import {submitPubToJournal} from '../../actions/journal';
+import {inviteReviewers} from '../../actions/user';
 import { Link } from 'react-router';
 import {PubLeftBar, PubNav, LoaderDeterminate} from '../../components';
 import {Discussions} from '../../containers';
@@ -21,6 +22,7 @@ let styles = {};
 const PubMeta = React.createClass({
 	propTypes: {
 		readerData: PropTypes.object,
+		inviteStatus: PropTypes.string,
 		journalData: PropTypes.object,
 		loginData: PropTypes.object,
 		slug: PropTypes.string,
@@ -71,7 +73,7 @@ const PubMeta = React.createClass({
 	// 	discussionObject.pub = this.props.readerData.getIn(['pubData', '_id']);
 	// 	discussionObject.version = this.props.query.version !== undefined && this.props.query.version > 0 && this.props.query.version < (this.props.readerData.getIn(['pubData', 'history']).size - 1) ? this.props.query.version : this.props.readerData.getIn(['pubData', 'history']).size;
 	// 	discussionObject.selections = this.props.readerData.getIn(['newDiscussionData', 'selections']);
-	// 	this.props.dispatch(addDiscussion(discussionObject, activeSaveID));	
+	// 	this.props.dispatch(addDiscussion(discussionObject, activeSaveID));
 	// },
 
 	// discussionVoteSubmit: function(type, discussionID, userYay, userNay) {
@@ -85,6 +87,10 @@ const PubMeta = React.createClass({
 		this.props.dispatch(submitPubToJournal(this.props.readerData.getIn(['pubData', '_id']), journalData));
 	},
 
+	submitInvites: function(inviteData) {
+		return this.props.dispatch(inviteReviewers(this.props.readerData.getIn(['pubData', '_id']), inviteData));
+	},
+
 	render: function() {
 		const pubData = this.props.readerData.get('pubData').toJS();
 
@@ -94,121 +100,132 @@ const PubMeta = React.createClass({
 		} else {
 			metaData.title = 'PubPub - ' + this.props.slug;
 		}
-		
+
 		// const pubData = this.props.readerData.get('pubData').toJS();
 		const versionIndex = this.props.query.version !== undefined ? this.props.query.version - 1 : this.props.readerData.getIn(['pubData', 'history']).size - 1;
 		const versionURL = this.props.query.version !== undefined ? '?version=' + this.props.query.version : '';
-
+		
 		return (
 			<div style={styles.container}>
 
 				<Helmet {...metaData} />
 
 				<div className="leftBar" style={[styles.leftBar, styles[this.props.readerData.get('status')]]}>
+					{!pubData.history[0].markdown
+						? null
+						: <PubLeftBar
+							slug={this.props.slug}
+							query={this.props.query}
+							pubStatus={pubData.status}
+							readRandomPubHandler={this.readRandomPub}
+							randomSlug={this.props.journalData.getIn(['journalData', 'randomSlug'])}
+							journalCount={pubData.featuredInList ? pubData.featuredInList.length : 0}
+							historyCount={pubData.history ? pubData.history.length : 0}
+							analyticsCount={pubData.views ? pubData.views : 0}
+							citationsCount={pubData.citations ? pubData.citations.length : 0}
+							newsCount={pubData.news ? pubData.news.length : 0} />
+					}
 					
-					<PubLeftBar 
-						slug={this.props.slug} 
-						query={this.props.query}
-						pubStatus={pubData.status}
-						readRandomPubHandler={this.readRandomPub}
-						randomSlug={this.props.journalData.getIn(['journalData', 'randomSlug'])}
-						journalCount={pubData.featuredInList ? pubData.featuredInList.length : 0}
-						historyCount={pubData.history ? pubData.history.length : 0}
-						analyticsCount={pubData.views ? pubData.views : 0}
-						citationsCount={pubData.citations ? pubData.citations.length : 0}
-						newsCount={pubData.news ? pubData.news.length : 0} />
-
 				</div>
 
 				<div className="centerBar" style={[styles.centerBar]}>
-					<PubNav 
-						height={this.height} 
-						status={this.props.readerData.get('status')} 
-						slug={this.props.slug} 
+					<PubNav
+						height={this.height}
+						status={this.props.readerData.get('status')}
+						slug={this.props.slug}
 						meta={this.props.meta}
 						query={this.props.query}/>
 
-					<LoaderDeterminate 
+					<LoaderDeterminate
 						value={this.props.readerData.get('status') === 'loading' ? 0 : 100}/>
 
 					<div style={[styles.centerContent, styles[this.props.readerData.get('status')]]}>
-						<div style={styles.metaTitle}>
-							{this.props.meta && globalMessages[this.props.meta]
-								? <span style={styles.metaTitleType}><FormattedMessage {...globalMessages[this.props.meta]} />:</span> 
-								: null
-							}
-							<Link to={'/pub/' + this.props.slug + versionURL} key={'metaTitleLink'} style={globalStyles.link}><span style={styles.metaTitlePub}>{this.props.readerData.getIn(['pubData', 'title'])}</span></Link>
-							
-						</div>
+						{!pubData.history[0].markdown
+							? <div style={styles.metaTitle}><span style={styles.metaTitleType}>{pubData.history[0].title}</span></div>
+							: <div>
+								<div style={styles.metaTitle}>
+									{this.props.meta && globalMessages[this.props.meta]
+										? <span style={styles.metaTitleType}><FormattedMessage {...globalMessages[this.props.meta]} />:</span>
+										: null
+									}
+									<Link to={'/pub/' + this.props.slug + versionURL} key={'metaTitleLink'} style={globalStyles.link}><span style={styles.metaTitlePub}>{this.props.readerData.getIn(['pubData', 'title'])}</span></Link>
 
-						{(() => {
-							switch (this.props.meta) {
-							case 'history':
-								return (<PubMetaHistory 
-										historyData={this.props.readerData.getIn(['pubData', 'history']).toJS()}
-										slug={this.props.slug}/>
-									);
-							case 'journals':
-								return (<PubMetaJournals 
-										featuredIn={this.props.readerData.getIn(['pubData', 'featuredIn']).toJS()}
-										featuredInList={this.props.readerData.getIn(['pubData', 'featuredInList']).toJS()}
-										submittedTo={this.props.readerData.getIn(['pubData', 'submittedTo']).toJS()}
-										submittedToList={this.props.readerData.getIn(['pubData', 'submittedToList']).toJS()}
-										handleSubmitToJournal={this.submitToJournal}
-										isAuthor={this.props.readerData.getIn(['pubData', 'isAuthor'])}/>
-									);
-							case 'source':
-								return (<PubMetaSource 
-										historyObject={this.props.readerData.getIn(['pubData', 'history', versionIndex]).toJS()}/>
-									);
-							case 'historydiff':
-								return (<PubMetaHistoryDiff 
-										diffObject={this.props.readerData.getIn(['pubData', 'history', versionIndex, 'diffObject']).toJS()}/>
-									);
-							case 'discussions':
-								return <Discussions editorCommentMode={false} metaID={this.props.metaID} />;
-								// return (<PubMetaDiscussions 
-								// 	metaID={this.props.metaID}
-								// 	slug={this.props.slug}
-								// 	discussionsData={this.props.readerData.getIn(['pubData', 'discussions']).toJS()}
-									
-								// 	addDiscussionHandler={this.addDiscussion}
-								// 	addDiscussionStatus={this.props.readerData.get('addDiscussionStatus')}
-								// 	newDiscussionData={this.props.readerData.get('newDiscussionData')}
-								// 	activeSaveID={this.props.readerData.get('activeSaveID')}
-								// 	userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])}
-								// 	handleVoteSubmit={this.discussionVoteSubmit} />
-								// 	);
-							case 'invite':
-								return (
-									<PubMetaInvite />
-								);
-							case 'citations':
-								return (
-									<PubMetaCitations />
-								);
-							case 'analytics':
-								return (
-									<PubMetaAnalytics />
-								);
-							case 'news':
-								return (
-									<PubMetaInTheNews />
-								);
-							// case 'reviews':
-							// 	return (<PubMetaReviews />
-							// 		);
-							// case 'review':
-							// 	return (<PubMetaReview />
-							// 		);
-							
-							default:
-								return null;
-							}
-						})()}
+								</div>
+
+								{(() => {
+									switch (this.props.meta) {
+									case 'history':
+										return (<PubMetaHistory
+												historyData={this.props.readerData.getIn(['pubData', 'history']).toJS()}
+												slug={this.props.slug}/>
+											);
+									case 'journals':
+										return (<PubMetaJournals
+												featuredIn={this.props.readerData.getIn(['pubData', 'featuredIn']).toJS()}
+												featuredInList={this.props.readerData.getIn(['pubData', 'featuredInList']).toJS()}
+												submittedTo={this.props.readerData.getIn(['pubData', 'submittedTo']).toJS()}
+												submittedToList={this.props.readerData.getIn(['pubData', 'submittedToList']).toJS()}
+												handleSubmitToJournal={this.submitToJournal}
+												isAuthor={this.props.readerData.getIn(['pubData', 'isAuthor'])}/>
+											);
+									case 'source':
+										return (<PubMetaSource
+												historyObject={this.props.readerData.getIn(['pubData', 'history', versionIndex]).toJS()}/>
+											);
+									case 'historydiff':
+										return (<PubMetaHistoryDiff
+												diffObject={this.props.readerData.getIn(['pubData', 'history', versionIndex, 'diffObject']).toJS()}/>
+											);
+									case 'discussions':
+										return <Discussions editorCommentMode={false} metaID={this.props.metaID} />;
+										// return (<PubMetaDiscussions
+										// 	metaID={this.props.metaID}
+										// 	slug={this.props.slug}
+										// 	discussionsData={this.props.readerData.getIn(['pubData', 'discussions']).toJS()}
+
+										// 	addDiscussionHandler={this.addDiscussion}
+										// 	addDiscussionStatus={this.props.readerData.get('addDiscussionStatus')}
+										// 	newDiscussionData={this.props.readerData.get('newDiscussionData')}
+										// 	activeSaveID={this.props.readerData.get('activeSaveID')}
+										// 	userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])}
+										// 	handleVoteSubmit={this.discussionVoteSubmit} />
+										// 	);
+									case 'invite':
+										return (
+											<PubMetaInvite
+												handleSubmitInvites={this.submitInvites}
+												inviteStatus={this.props.inviteStatus}
+												/>
+										);
+									case 'citations':
+										return (
+											<PubMetaCitations />
+										);
+									case 'analytics':
+										return (
+											<PubMetaAnalytics />
+										);
+									case 'news':
+										return (
+											<PubMetaInTheNews />
+										);
+									// case 'reviews':
+									// 	return (<PubMetaReviews />
+									// 		);
+									// case 'review':
+									// 	return (<PubMetaReview />
+									// 		);
+
+									default:
+										return null;
+									}
+								})()}
+							</div>
+						}
+						
 
 					</div>
-					
+
 
 				</div>
 
@@ -220,13 +237,14 @@ const PubMeta = React.createClass({
 
 export default connect( state => {
 	return {
-		readerData: state.pub, 
+		readerData: state.pub,
 		loginData: state.login,
 		journalData: state.journal,
 		slug: state.router.params.slug,
 		meta: state.router.params.meta,
 		metaID: state.router.params.metaID,
 		query: state.router.location.query,
+		inviteStatus: state.user.get('inviteStatus')
 	};
 })( Radium(PubMeta) );
 
@@ -305,8 +323,8 @@ styles = {
 			height: 'calc(100vh - ' + globalStyles.headerHeight + ' - ' + (2 * pubSizes.xLargeLeftBarPadding) + 'px)',
 			marginRight: pubSizes.xLargePubMeta
 		},
-		
-		
+
+
 	},
 	centerContent: {
 		transition: '.3s linear opacity .25s',
@@ -423,7 +441,7 @@ styles = {
 	},
 	loading: {
 		opacity: 0,
-	}, 
+	},
 	loaded: {
 		opacity: 1
 	},

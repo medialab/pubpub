@@ -144,6 +144,16 @@ pubSchema.statics.isUnique = function (slug,callback) {
 		});
 };
 
+pubSchema.statics.getSimplePub = function (id,callback) {
+	this.findById(id)
+	.exec((err, pub)=> {
+		callback(err,pub);
+	});
+
+
+};
+
+
 pubSchema.statics.getPub = function (slug, readerID, journalID, callback) {
 	this.findOne({slug: slug})
 	.populate({ path: 'discussions', model: 'Discussion' })
@@ -175,7 +185,7 @@ pubSchema.statics.getPub = function (slug, readerID, journalID, callback) {
 					return callback(null, {message: 'Private Pub', slug: slug});
 				}
 			}
-			
+
 			const outputPub = populatedPub.toObject();
 			if (populatedPub.collaborators.canEdit.indexOf(readerID) > -1) {
 				outputPub.isAuthor = true;
@@ -199,10 +209,10 @@ pubSchema.statics.getPubEdit = function (slug, readerID, callback) {
 	.exec((err, pub) =>{
 		if (err) { return callback(err, null); }
 
-		if (!pub) { return callback(null, 'Pub Not Found'); }
+		if (!pub) { return callback(null, 'Pub Not Found', true); }
 
 		if (pub.collaborators.canEdit.indexOf(readerID) === -1 && pub.collaborators.canRead.indexOf(readerID) === -1) {
-			return callback(null, 'Not Authorized');
+			return callback(null, 'Not Authorized', true);
 		}
 
 		let isReader = true;
@@ -251,7 +261,13 @@ pubSchema.statics.generateDiffObject = function(oldPubObject, newPubObject) {
 	outputObject.diffTitle = jsdiff.diffWords(oldPubObject.title, newPubObject.title, {newlineIsToken: true});
 	outputObject.diffAbstract = jsdiff.diffWords(oldPubObject.abstract, newPubObject.abstract, {newlineIsToken: true});
 	outputObject.diffAuthorsNote = jsdiff.diffWords(oldPubObject.authorsNote, newPubObject.authorsNote, {newlineIsToken: true});
-	outputObject.diffMarkdown = jsdiff.diffWords(oldPubObject.markdown, newPubObject.markdown, {newlineIsToken: true});
+	if (newPubObject.slug === 'cdmxglobal') {
+		outputObject.diffMarkdown = jsdiff.diffSentences(oldPubObject.markdown, newPubObject.markdown, {newlineIsToken: true});
+	} else {
+		outputObject.diffMarkdown = jsdiff.diffWords(oldPubObject.markdown, newPubObject.markdown, {newlineIsToken: true});
+	}
+
+
 
 	let additions = 0;
 	let deletions = 0;
@@ -265,7 +281,6 @@ pubSchema.statics.generateDiffObject = function(oldPubObject, newPubObject) {
 			}
 		});
 	}
-
 
 	outputObject.additions = additions;
 	outputObject.deletions = deletions;

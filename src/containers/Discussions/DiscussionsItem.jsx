@@ -55,38 +55,42 @@ const DiscussionsItem = React.createClass({
 		// Go through all the selections and add them to the body
 		const Marklib = require('marklib');
 		this.props.discussionItem.selections.map((selection)=>{
-			const pIndex = this.props.pHashes[selection.ancestorHash];
-			if (pIndex) {
-				try {
-					const result = {
-						startContainerPath: selection.startContainerPath.replace(/div:nth-of-type\((.*)\)/, 'div:nth-of-type(' + pIndex + ')'),
-						endContainerPath: selection.endContainerPath.replace(/div:nth-of-type\((.*)\)/, 'div:nth-of-type(' + pIndex + ')'),
-						startOffset: selection.startOffset,
-						endOffset: selection.endOffset,
-					};	
-					const renderer = new Marklib.Rendering(document, {className: 'selection selection-' + selection._id}, document.getElementById('pubBodyContent'));
-					renderer.renderWithResult(result);	
-					renderer.on('click', function(item) {
-						const destination = document.getElementById('selection-block-' + selection._id);
-						const context = document.getElementsByClassName('rightBar')[0];
-						smoothScroll(destination, 500, ()=>{}, context);
-					});
-					renderer.on('hover-enter', function(item) {
-						const destination = document.getElementById('selection-block-' + selection._id);
-						destination.className = destination.className.replace('selection-block', 'selection-block-active');
-					});
-					renderer.on('hover-leave', function(item) {
-						const destination = document.getElementById('selection-block-' + selection._id);
-						destination.className = destination.className.replace('selection-block-active', 'selection-block');
-					});
-				} catch (err) {
-					if (__DEVELOPMENT__) {
-						console.log('selection', err);	
+			// console.log('selection', selection);
+			setTimeout(()=>{
+				const pIndex = this.props.pHashes[selection.ancestorHash];
+				// console.log('pIndex', pIndex);
+				if (pIndex) {
+					try {
+						const result = {
+							startContainerPath: selection.startContainerPath.replace(/div:nth-of-type\([^\)]+\)/, 'div:nth-of-type(' + pIndex + ')'),
+							endContainerPath: selection.endContainerPath.replace(/div:nth-of-type\([^\)]+\)/, 'div:nth-of-type(' + pIndex + ')'),
+							startOffset: selection.startOffset,
+							endOffset: selection.endOffset,
+						};	
+						// console.log('reproduced result', result);
+						const renderer = new Marklib.Rendering(document, {className: 'selection selection-' + selection._id}, document.getElementById('pubBodyContent'));
+						renderer.renderWithResult(result);	
+						renderer.on('click', function(item) {
+							const destination = document.getElementById('selection-block-' + selection._id);
+							const context = document.getElementsByClassName('rightBar')[0];
+							smoothScroll(destination, 500, ()=>{}, context);
+						});
+						renderer.on('hover-enter', function(item) {
+							const destination = document.getElementById('selection-block-' + selection._id);
+							destination.className = destination.className.replace('selection-block', 'selection-block-active');
+						});
+						renderer.on('hover-leave', function(item) {
+							const destination = document.getElementById('selection-block-' + selection._id);
+							destination.className = destination.className.replace('selection-block-active', 'selection-block');
+						});
+					} catch (err) {
+						if (__DEVELOPMENT__) {
+							console.log('selection', err);	
+						}
 					}
 				}
-			}
-
-			
+			}, 100);
+				
 		});
 		
 	},
@@ -111,6 +115,7 @@ const DiscussionsItem = React.createClass({
 		const references = discussionItem.references || [];
 		const selections = discussionItem.selections || [];
 		const md = marked(discussionItem.markdown || '', {assets, references, selections});
+
 		return (
 			<div style={styles.container}>
 				
@@ -147,17 +152,22 @@ const DiscussionsItem = React.createClass({
 
 				<div style={styles.discussionBody}>
 					<div style={styles.discussionVoting}>
-						<DiscussionsScore 
-							discussionID={discussionItem._id}
-							score={discussionItem.yays - discussionItem.nays}
-							userYay={discussionItem.userYay}
-							userNay={discussionItem.userNay} 
-							handleVoteSubmit={this.props.handleVoteSubmit} 
-							readOnly={this.props.noReply}/>
+						{this.props.noPermalink
+							? null
+							: <DiscussionsScore 
+								discussionID={discussionItem._id}
+								score={discussionItem.yays - discussionItem.nays}
+								userYay={discussionItem.userYay}
+								userNay={discussionItem.userNay} 
+								handleVoteSubmit={this.props.handleVoteSubmit} 
+								readOnly={this.props.noReply}/>
+						}
+						
 					</div>
 
 					<div style={styles.discussionContent}>
 						{md.tree}
+						{/* discussionItem.markdown */}
 					</div>
 				</div>
 				

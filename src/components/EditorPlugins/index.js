@@ -5,6 +5,7 @@ import ImagePlugin 	from './ImagePlugin';
 import CitePlugin 	from './CitePlugin';
 import VideoPlugin 	from './VideoPlugin';
 import QuotePlugin 	from './QuotePlugin';
+import IframePlugin 	from './IframePlugin';
 import SelectionPlugin 	from './SelectionPlugin';
 
 import {parsePluginString} from '../../utils/parsePlugins';
@@ -56,9 +57,17 @@ export default {
 		inline: true,
 		autocomplete: false,
 		inlineFunc: function(cap, renderer, data) {
-			const selectionIndex = parseInt(cap[1].replace(':', ''), 10) - 1;
-			const selectionItem = data.selections[selectionIndex];
-			return renderer(selectionItem._id, {selectionItem});
+			try {
+				const selectionIndex = parseInt(cap[1].replace(':', ''), 10) - 1;
+				const selectionItem = data.selections[selectionIndex];
+				if (!selectionItem) {
+					return renderer(cap[1], {selectionItem: 'empty'});
+				}
+				return renderer(selectionItem._id, {selectionItem});
+			} catch (err) {
+				console.log('Error parsing selection: ' + err);
+			}
+			return renderer(cap[1], {selectionItem: 'empty'});
 		}
 	},
 	image: {
@@ -128,6 +137,27 @@ export default {
 			return renderer(refName, propDict);
 		}
 	},
+	iframe: {
+		component: IframePlugin,
+		inline: true,
+		autocomplete: true,
+		rule: /^(?:\s)*(?:\{\{)iframe:([^\n\}]*)(?:\}\})/,
+		inlineFunc: function(cap, renderer, data) {
+			const references = data.references;
+			const propDict = parsePluginString(cap[1]);
+			const refName = propDict.srcRef || propDict.reference || 'none';
+			const ref = references[refName];
+
+			if (Object.keys(propDict).length === 0) {
+				propDict.error = 'empty';
+			} else if (ref) {
+				propDict.reference = ref;
+			} else {
+				propDict.error = 'type';
+			}
+			return renderer(refName, propDict);
+		}
+	},
 	cite: {
 		component: CitePlugin,
 		inline: true,
@@ -157,10 +187,12 @@ import {imageOptions} from './ImagePlugin';
 import {videoOptions} from './VideoPlugin';
 import {citeOptions} from './CitePlugin';
 import {quoteOptions} from './QuotePlugin';
+import {iframeOptions} from './IframePlugin';
 
 export const pluginOptions = {
 	image: imageOptions,
 	cite: citeOptions,
 	video: videoOptions,
 	quote: quoteOptions,
+	iframe: iframeOptions
 };

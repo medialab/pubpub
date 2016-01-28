@@ -1,14 +1,18 @@
 export const scienceStyle = {
 	'#pub-title': {
-		textAlign: 'center',
-		fontSize: '3em',
+		textAlign: 'left',
+		fontSize: '2.6em',
 		margin: '0.7em 0px',
+		fontWeight: '700',
+		lineHeight: '1.3em',
+		color: '#222',
+		fontFamily: 'Lora',
 	},
 	'#pub-authors': {
-		textAlign: 'center',
+		textAlign: 'left',
 		color: '#555',
-		fontSize: '1.3em',
-		padding: '0px 4em',
+		fontSize: '1.0em',
+		padding: '0px',
 	},
 	'.pub-author': {
 		color: '#555',
@@ -17,8 +21,8 @@ export const scienceStyle = {
 		},
 	},
 	'#pub-dates': {
-		textAlign: 'center',
-		padding: '0px 3em',
+		textAlign: 'left',
+		padding: '0px',
 		color: '#555',
 	},
 	'#pub-abstract': {
@@ -39,7 +43,7 @@ export const scienceStyle = {
 	},
 	'#pub-header-divider': {
 		height: '1px',
-		width: '80%',
+		width: '100%',
 		margin: '0 auto',
 		backgroundColor: '#DDD',
 	},
@@ -51,12 +55,6 @@ export const scienceStyle = {
 	'.pub-reference': {
 		padding: '0.5em 1.5em',
 		fontSize: '0.85em',
-	},
-	'h1, h2, h3, h4, h5, h6': {
-		margin: '0px',
-		marginBottom: '1.58333em',
-		padding: '0px',
-		color: '#4C4C4C',
 	},
 	'.p-block': {
 		fontFamily: 'Lora',
@@ -78,7 +76,7 @@ export const scienceStyle = {
 	},
 	'ul, ol': {
 		fontFamily: 'Lora',
-		padding: '0px 1.5em 0px 4em',
+		padding: '0px 3em 0px 3em',
 		color: '#565656',
 	},
 	'span + li + span + li': {
@@ -106,16 +104,26 @@ export const scienceStyle = {
 	*/
 	'h1': {
 		fontSize: '2em',
+		color: '#666',
 	},
 	'h2': {
 		fontSize: '1.41421em',
+		color: '#666',
 	},
 	'h3': {
 		fontSize: '1.25992em',
+		color: '#666',
 	},
 	'h4': {
 		fontSize: '1.12246em',
-	}
+		color: '#666',
+	},
+	'h5, h6': {
+		color: '#666',
+	},
+	'a': {
+		color: 'inherit',
+	},
 };
 
 

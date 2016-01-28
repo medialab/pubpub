@@ -2,11 +2,11 @@
 
 import React, {PropTypes} from 'react';
 import Radium, {Style} from 'radium';
-import {LoaderIndeterminate} from '../../components';
+import {LoaderIndeterminate, License} from '../../components';
 import {globalStyles} from '../../utils/styleConstants';
 
 import {globalMessages} from '../../utils/globalMessages';
-import {FormattedMessage} from 'react-intl';
+import {injectIntl, FormattedMessage} from 'react-intl';
 
 let styles = {};
 
@@ -19,16 +19,6 @@ import {clearTempHighlights} from '../../components/PubSelectionPopup/selectionF
 // import markdownExtensions from '../../components/EditorPlugins';
 // marked.setExtensions(markdownExtensions);
 
-const cmOptions = {
-	lineNumbers: false,
-	value: '',
-	lineWrapping: true,
-	viewportMargin: Infinity, // This will cause bad performance on large documents. Rendering the entire thing...
-	autofocus: false,
-	mode: 'pubpubmarkdown',
-	extraKeys: {'Ctrl-Space': 'autocomplete'}
-};
-
 const PubDiscussionsInput = React.createClass({
 	propTypes: {
 		addDiscussionHandler: PropTypes.func,
@@ -40,11 +30,24 @@ const PubDiscussionsInput = React.createClass({
 		isReply: PropTypes.bool,
 		activeSaveID: PropTypes.string,
 		saveID: PropTypes.string,
+		intl: PropTypes.object,
 
 	},
 
 	componentDidMount() {
 		initCodeMirrorMode();
+		
+		const cmOptions = {
+			lineNumbers: false,
+			value: '',
+			lineWrapping: true,
+			viewportMargin: Infinity, // This will cause bad performance on large documents. Rendering the entire thing...
+			autofocus: false,
+			mode: 'pubpubmarkdown',
+			extraKeys: {'Ctrl-Space': 'autocomplete'},
+			placeholder: this.props.intl.formatMessage(globalMessages.discussionPlaceholder),
+		};
+
 		const codeMirror = CodeMirror(document.getElementById(this.props.codeMirrorID), cmOptions);
 		codeMirror.on('change', this.onEditorChange);	
 	},
@@ -97,6 +100,7 @@ const PubDiscussionsInput = React.createClass({
 						fontFamily: 'Arial',
 						padding: '0px 20px',
 						width: 'calc(100% - 40px)',
+						minHeight: '25px',
 					}
 				}} />
 
@@ -106,6 +110,9 @@ const PubDiscussionsInput = React.createClass({
 							? <img style={styles.thumbnailImage}src={this.props.userThumbnail} />
 							: null
 						}
+					</div>
+					<div style={styles.license} key={'discussionLicense'}>
+						<License text={'All discussions are licensed under a'} hover={true} />
 					</div>
 					{/* <div style={styles.topCheckbox} key={'newDiscussionAnonymous'} >
 						<label style={styles.checkboxLabel} htmlFor={'anonymousDiscussion'}>Anonymous</label>
@@ -133,12 +140,12 @@ const PubDiscussionsInput = React.createClass({
 	}
 });
 
-export default Radium(PubDiscussionsInput);
+export default injectIntl(Radium(PubDiscussionsInput));
 
 styles = {
 	container: {
 		width: '100%',
-		overflow: 'hidden',
+		// overflow: 'hidden',
 		margin: '20px 0px',
 		position: 'relative',
 	},
@@ -147,7 +154,7 @@ styles = {
 	},
 	inputTopLine: {
 		// backgroundColor: 'rgba(255,0,0,0.1)',
-		height: 20,
+		height: 22,
 	},
 	inputBottomLine: {
 		// backgroundColor: 'rgba(255,0,100,0.1)',
@@ -157,7 +164,7 @@ styles = {
 	inputBox: {
 		border: '1px solid #ddd',
 		backgroundColor: '#fff',
-		minHeight: 25,
+		// minHeight: 25,
 		padding: '10px 0px',
 	},
 	loaderContainer: {
@@ -166,14 +173,23 @@ styles = {
 		width: '100%',
 	},
 	thumbnail: {
-		width: '18px',
-		height: '18px',
+		width: '20px',
+		height: '20px',
 		padding: '1px',
 		marginRight: '1px',
 		float: 'right',
 	},
 	thumbnailImage: {
 		width: '100%',
+	},
+	license: {
+		float: 'right',
+		lineHeight: '26px',
+		opacity: '0.4',
+		paddingRight: '4px',
+		':hover': {
+			opacity: '1.0',
+		},
 	},
 	topCheckbox: {
 		float: 'right',

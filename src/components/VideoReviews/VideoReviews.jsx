@@ -8,22 +8,6 @@ let styles = {};
 let Rangy = null;
 let Marklib = null;
 
-function getRandomString() {
-	let result;
-	if (window.crypto) {
-		const rand = window.crypto.getRandomValues(new Uint32Array(3));
-		let token = '';
-		let iterator;
-		for (let count = 0, len = rand.length; iterator < len; count++) {
-			token += rand[count].toString(36);
-		}
-		result = token;
-	} else {
-		result = (Math.random() * new Date().getTime()).toString(36).replace( /\./g, '');
-	}
-	return result;
-}
-
 function xhr(url, data, callback) {
 	const request = new XMLHttpRequest();
 	request.onreadystatechange = function() {
@@ -34,7 +18,6 @@ function xhr(url, data, callback) {
 	request.open('POST', url);
 	request.send(data);
 }
-
 
 function xhrGet(url, callback) {
 	const request = new XMLHttpRequest();
@@ -57,6 +40,7 @@ const VideoReviews = React.createClass({
 
 		return {
 			recording: false,
+			playing: false
 		};
 	},
 	componentDidMount: function() {
@@ -95,9 +79,17 @@ const VideoReviews = React.createClass({
 
 	fetchRecording: function() {
 		// this.restoreSelections(this.actions);
-		xhrGet('http://videoreviews.herokuapp.com/fetch', function(actions) {
-			this.restoreSelections(actions);
+		xhrGet('http://videoreviews.herokuapp.com/fetch', function(review) {
+			this.restoreSelections(review.actions);
+			this.playVideo(review.video);
+			this.setState({playing: true});
 		}.bind(this));
+	},
+
+	playVideo: function(videoName) {
+		// this.cameraPreview.src = 'http://videoreviews.herokuapp.com/uploads/' + _fileName;
+		this.cameraPreview.src = 'http://videoreview.s3-website-us-west-2.amazonaws.com/' + videoName;
+		this.cameraPreview.play();
 	},
 
 	restoreSelections: function(actions) {
@@ -328,10 +320,6 @@ const VideoReviews = React.createClass({
 			// const href = location.href.substr(0, location.href.lastIndexOf('/') + 1);
 			this.cameraPreview.src = 'http://videoreviews.herokuapp.com/uploads/' + _fileName;
 			this.cameraPreview.play();
-
-			const h2 = document.createElement('h2');
-			h2.innerHTML = '<a href="' + this.cameraPreview.src + '">' + this.cameraPreview.src + '</a>';
-			document.body.appendChild(h2);
 		}.bind(this));
 
 	},
@@ -342,7 +330,7 @@ const VideoReviews = React.createClass({
 			<div>
 				<div ref={(ref) => this.mouseElem = ref} style={styles.mouse}/>
 				<div style={styles.wrapper}>
-					<p style={styles.camera(this.state.recording)}>
+					<p style={styles.camera(this.state.recording || this.state.playing)}>
 						<video id="camera-preview" ref={(ref) => this.cameraPreview = ref} controls style={styles.preview}></video>
 					</p>
 					<div>

@@ -27,8 +27,8 @@ import {editorDefaultText} from './editorDefaultText';
 import SHA1 from 'crypto-js/sha1';
 import encHex from 'crypto-js/enc-hex';
 
-import marked from '../../modules/markdown/markdown';
-import markdownExtensions from '../../components/EditorPlugins';
+// import marked from '../../markdown/markdown';
+// import markdownExtensions from '../../components/EditorPlugins';
 import FirepadUserList from './editorFirepadUserlist';
 
 import {Discussions} from '../';
@@ -38,7 +38,7 @@ import {convertFirebaseToObject} from '../../utils/parsePlugins';
 import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
 
-marked.setExtensions(markdownExtensions);
+const FireBaseURL = (process.env.NODE_ENV === 'production') ? 'https://pubpub.firebaseio.com/' : 'https://pubpub-dev.firebaseio.com/';
 
 const cmOptions = {
 	lineNumbers: false,
@@ -72,6 +72,7 @@ const Editor = React.createClass({
 		return {
 			initialized: false,
 			tree: [],
+			markdown: '',
 			travisTOC: [],
 			travisTOCFull: [],
 			activeFocus: '',
@@ -79,6 +80,7 @@ const Editor = React.createClass({
 				collaborators: {},
 				assets: {},
 				references: {},
+				selections: [],
 				settings: {},
 			},
 			codeMirrorChange: {},
@@ -97,7 +99,7 @@ const Editor = React.createClass({
 			if (this.props.editorData.getIn(['pubEditData', 'token'])) {
 				this.initializeEditorData(this.props.editorData.getIn(['pubEditData', 'token']));
 			}
-			
+
 		}
 	},
 
@@ -118,7 +120,7 @@ const Editor = React.createClass({
 
 	initializeEditorData: function(token) {
 		// Load Firebase and bind using ReactFireMixin. For assets, references, etc.
-		const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData' );
+		const ref = new Firebase(FireBaseURL + this.props.slug + '/editorData' );
 		ref.authWithCustomToken(token, (error, authData)=> {
 			if (error) {
 				console.log('Authentication Failed!', error);
@@ -126,7 +128,7 @@ const Editor = React.createClass({
 				this.bindAsObject(ref, 'firepadData');
 
 				// Load Firebase ref that is used for firepad
-				const firepadRef = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/firepad');
+				const firepadRef = new Firebase(FireBaseURL + this.props.slug + '/firepad');
 
 				// Load codemirror
 				const codeMirror = CodeMirror(document.getElementById('codemirror-wrapper'), cmOptions);
@@ -141,7 +143,7 @@ const Editor = React.createClass({
 					defaultText: editorDefaultText(this.props.pubData.getIn(['createPubData', 'title']))
 				});
 
-				new Firebase('https://pubpub.firebaseio.com/.info/connected').on('value', (connectedSnap)=> {
+				new Firebase(FireBaseURL + '.info/connected').on('value', (connectedSnap)=> {
 					if (connectedSnap.val() === true) {
 						/* we're connected! */
 						this.setState({editorSaveStatus: 'saved'});
@@ -200,7 +202,7 @@ const Editor = React.createClass({
 	},
 
 	onEditorChange: function(cm, change) {
-
+		// console.log(change);
 		// const start = performance.now();
 		CodeMirror.commands.autocomplete(cm, CodeMirror.hint.plugins, {completeSingle: false});
 
@@ -216,17 +218,17 @@ const Editor = React.createClass({
 		// const markdownStart = performance.now();
 		const fullMD = cm.getValue();
 		// const markdownGrab = performance.now();
-		const titleRE = /\{\{title:(.*?)\}\}/i;
+		const titleRE = /\[\[title:(.*?)\]\]/i;
 		const titleMatch = fullMD.match(titleRE);
 		const title = titleMatch && titleMatch.length ? titleMatch[1].trim() : '';
 		// const titleGrabAndSet = performance.now();
 
-		const abstractRE = /\{\{abstract:(.*?)\}\}/i;
+		const abstractRE = /\[\[abstract:(.*?)\]\]/i;
 		const abstractMatch = fullMD.match(abstractRE);
 		const abstract = abstractMatch && abstractMatch.length ? abstractMatch[1].trim() : '';
 		// const abstractGrabAndSet = performance.now();
 
-		const authorsNoteRE = /\{\{authorsNote:(.*?)\}\}/i;
+		const authorsNoteRE = /\[\[authorsNote:(.*?)\]\]/i;
 		const authorsNoteMatch = fullMD.match(authorsNoteRE);
 		const authorsNote = authorsNoteMatch && authorsNoteMatch.length ? authorsNoteMatch[1].trim() : '';
 		// const aNGrabAndSet = performance.now();
@@ -234,23 +236,27 @@ const Editor = React.createClass({
 		const assets = convertFirebaseToObject(this.state.firepadData.assets);
 		const references = convertFirebaseToObject(this.state.firepadData.references, true);
 		const selections = [];
-		const markdown = fullMD.replace(/\{\{title:.*?\}\}/g, '').replace(/\{\{abstract:.*?\}\}/g, '').replace(/\{\{authorsNote:.*?\}\}/g, '').trim();
+		const markdown = fullMD.replace(/\[\[title:.*?\]\]/g, '').replace(/\[\[abstract:.*?\]\]/g, '').replace(/\[\[authorsNote:.*?\]\]/g, '').trim();
 		// const removeTitleEtc = performance.now();
 		// let compiledMarkdown = 0;
 		// let saveState = 0;
 
 		try {
 
-			const mdOutput = marked(markdown, {assets, references, selections});
 			// compiledMarkdown = performance.now();
 			this.setState({
-				tree: mdOutput.tree,
-				travisTOC: mdOutput.travisTOC,
-				travisTOCFull: mdOutput.travisTOCFull,
+				markdown: markdown,
+				travisTOC: [],
+				travisTOCFull: [],
+				// travisTOC: mdOutput.travisTOC,
+				// travisTOCFull: mdOutput.travisTOCFull,
 				codeMirrorChange: change,
 				title: title,
 				abstract: abstract,
 				authorsNote: authorsNote,
+				assetsObject: assets,
+				referencesObject: references,
+				selectionsArray: selections,
 			});
 			// saveState = performance.now();
 		} catch (err) {
@@ -299,15 +305,15 @@ const Editor = React.createClass({
 		const cm = document.getElementById('codemirror-wrapper').childNodes[0].childNodes[0].CodeMirror;
 		const fullMD = cm.getValue();
 
-		const titleRE = /\{\{title:(.*?)\}\}/i;
+		const titleRE = /\[\[title:(.*?)\]\]/i;
 		const titleMatch = fullMD.match(titleRE);
 		const title = titleMatch && titleMatch.length ? titleMatch[1].trim() : '';
 
-		const abstractRE = /\{\{abstract:(.*?)\}\}/i;
+		const abstractRE = /\[\[abstract:(.*?)\]\]/i;
 		const abstractMatch = fullMD.match(abstractRE);
 		const abstract = abstractMatch && abstractMatch.length ? abstractMatch[1].trim() : '';
 
-		const authorsNoteRE = /\{\{authorsNote:(.*?)\}\}/i;
+		const authorsNoteRE = /\[\[authorsNote:(.*?)\]\]/i;
 		const authorsNoteMatch = fullMD.match(authorsNoteRE);
 		const authorsNote = authorsNoteMatch && authorsNoteMatch.length ? authorsNoteMatch[1].trim() : '';
 
@@ -335,24 +341,25 @@ const Editor = React.createClass({
 			title: title,
 			abstract: abstract,
 			authorsNote: authorsNote,
-			markdown: fullMD.replace(/\{\{title:.*?\}\}/g, '').replace(/\{\{abstract:.*?\}\}/g, '').replace(/\{\{authorsNote:.*?\}\}/g, '').trim(),
+			markdown: fullMD.replace(/\[\[title:.*?\]\]/g, '').replace(/\[\[abstract:.*?\]\]/g, '').replace(/\[\[authorsNote:.*?\]\]/g, '').trim(),
 			authors: authors,
 			assets: this.state.firepadData.assets,
 			references: this.state.firepadData.references,
+			// selections: this.state.firepadData.selections,
 			style: this.state.firepadData.settings.pubStyle,
 			status: versionState,
 			pHashes: pHashes,
 			publishNote: versionDescription,
 		};
-		this.props.dispatch(clearPub());	
+		this.props.dispatch(clearPub());
 
 		// This should perhaps be done on the backend in one fell swoop - rather than having two client side calls.
 		if (this.props.journalData.get('baseSubdomain')) {
-			this.props.dispatch(submitPubToJournal(this.props.editorData.getIn(['pubEditData', '_id']), this.props.journalData.getIn(['journalData']).toJS()));	
+			this.props.dispatch(submitPubToJournal(this.props.editorData.getIn(['pubEditData', '_id']), this.props.journalData.getIn(['journalData']).toJS()));
 		}
 
 		this.props.dispatch(publishVersion(newVersion));
-		
+
 	},
 
 	// Add asset to firebase.
@@ -371,19 +378,19 @@ const Editor = React.createClass({
 		asset.author = this.props.loginData.getIn(['userData', 'username']);
 
 		// Push to firebase ref
-		const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData/assets' );
+		const ref = new Firebase(FireBaseURL + this.props.slug + '/editorData/assets' );
 		ref.push(asset);
 	},
 
 	deleteAsset: function(assetID) {
 		return ()=>{
-			const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData/assets/' + assetID );
+			const ref = new Firebase(FireBaseURL + this.props.slug + '/editorData/assets/' + assetID );
 			ref.remove();
 		};
 	},
 
 	saveUpdatedCollaborators: function(newCollaborators, removedUser) {
-		const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData/collaborators' );
+		const ref = new Firebase(FireBaseURL + this.props.slug + '/editorData/collaborators' );
 		ref.set(newCollaborators);
 		this.props.dispatch(saveCollaboratorsToPub(newCollaborators, removedUser, this.props.slug));
 	},
@@ -393,18 +400,18 @@ const Editor = React.createClass({
 	},
 
 	saveUpdatedSettingsFirebase: function(newSettings) {
-		const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData/settings' );
+		const ref = new Firebase(FireBaseURL + this.props.slug + '/editorData/settings' );
 		ref.update(newSettings);
 	},
 
 	saveUpdatedSettingsFirebaseAndPubPub: function(newSettings) {
-		const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData/settings' );
+		const ref = new Firebase(FireBaseURL + this.props.slug + '/editorData/settings' );
 		ref.update(newSettings);
 		this.props.dispatch(saveSettingsPubPub(this.props.slug, newSettings));
 	},
 
 	saveReferences: function(newReferences) {
-		const ref = new Firebase('https://pubpub.firebaseio.com/' + this.props.slug + '/editorData/references' );
+		const ref = new Firebase(FireBaseURL + this.props.slug + '/editorData/references' );
 		ref.set(newReferences);
 	},
 
@@ -493,7 +500,7 @@ const Editor = React.createClass({
 								</div>
 								: null
 							}
-							
+
 						</div>
 					);
 				case 'comments':
@@ -548,9 +555,14 @@ const Editor = React.createClass({
 				authorsNote={this.state.authorsNote}
 				minFont={15}
 				htmlTree={this.state.tree}
+				markdown={this.state.markdown}
 				authors={this.getAuthorsArray()}
 				// addSelectionHandler={this.addSelection}
 				style={this.state.firepadData && this.state.firepadData.settings ? this.state.firepadData.settings.pubStyle : undefined}
+				assetsObject={this.state.assetsObject}
+				referencesObject={this.state.referencesObject}
+				selectionsArray={this.state.selectionsArray}
+
 				references={referencesList}
 				isFeatured={true}/>
 		);
@@ -640,14 +652,14 @@ const Editor = React.createClass({
 						<div style={styles.isMobile}>
 							{/* In mobile - readers and editors have the same view. Editors have a note about screen size. */}
 							{this.renderNav(true)}
-							
+
 							<div style={[styles.previewBlockWrapper, this.state.previewPaneMode === 'preview' && styles.previewBlockWrapperShow]}>
 								{isReader
 									? null
 									: <span style={styles.editorDisabledMessage}>
 										<FormattedMessage id="editingDisableMobile" defaultMessage="Editing disabled on mobile view - but you can still read and comment. Open on a laptop or desktop to edit." />
 									</span>
-									
+
 								}
 
 								{this.renderBody()}
@@ -672,7 +684,7 @@ const Editor = React.createClass({
 
 									<div style={styles.hiddenCodeMirror}>
 										{/*  Necessary for body rednering to work */}
-										<EditorTopNav 
+										<EditorTopNav
 											status={editorData.get('status')}
 											darkMode={darkMode}
 											openModalHandler={this.openModalHandler}
@@ -729,7 +741,7 @@ const Editor = React.createClass({
 										saveUpdatedSettingsFirebaseAndPubPub={this.saveUpdatedSettingsFirebaseAndPubPub} />
 
 									{/* Top Nav. Fixed to the top of the editor page, just below the main pubpub bar */}
-									<EditorTopNav 
+									<EditorTopNav
 										status={editorData.get('status')}
 										darkMode={darkMode}
 										openModalHandler={this.openModalHandler}
@@ -742,7 +754,7 @@ const Editor = React.createClass({
 									</div>
 
 									{/* Bottom Nav */}
-									<EditorBottomNav 
+									<EditorBottomNav
 										viewMode={viewMode}
 										loadStatus={loadStatus}
 										darkMode={darkMode}
@@ -758,7 +770,7 @@ const Editor = React.createClass({
 									{/* Markdown Editing Block */}
 									<div id="editor-text-wrapper" style={[globalStyles.hiddenUntilLoad, globalStyles[loadStatus], styles.common.editorMarkdown, styles[viewMode].editorMarkdown]}>
 
-										<EditorPluginPopup ref="pluginPopup" references={this.state.firepadData.references} assets={this.state.firepadData.assets} activeFocus={this.state.activeFocus} codeMirrorChange={this.state.codeMirrorChange}/>
+										<EditorPluginPopup ref="pluginPopup" references={this.state.firepadData.references} assets={this.state.firepadData.assets} /* selections={this.state.firepadData.selections} */ activeFocus={this.state.activeFocus} codeMirrorChange={this.state.codeMirrorChange}/>
 
 										{/* Insertion point for codemirror and firepad */}
 										<div style={[this.state.activeFocus !== '' && styles.hiddenMainEditor]}>
@@ -774,7 +786,7 @@ const Editor = React.createClass({
 									<div id="editor-live-preview-wrapper" style={[globalStyles.hiddenUntilLoad, globalStyles[loadStatus], styles.common.editorPreview, styles[viewMode].editorPreview]} className={'editorPreview'}>
 
 										{this.renderNav(false)}
-										
+
 										<div className="editorBodyView" style={[styles.previewBlockWrapper, this.state.previewPaneMode === 'preview' && styles.previewBlockWrapperShow]}>
 											<div className={'mainRenderBody'}>
 												{this.renderBody()}

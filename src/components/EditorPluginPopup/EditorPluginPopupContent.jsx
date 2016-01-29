@@ -1,5 +1,6 @@
 import React, {PropTypes} from 'react';
 import Radium from 'radium';
+import {pluginOptions} from '../../components/EditorPlugins';
 import {parsePluginString} from '../../utils/parsePlugins';
 
 import {globalMessages} from '../../utils/globalMessages';
@@ -16,9 +17,7 @@ const EditorPluginPopup = React.createClass({
 	propTypes: {
 		activeFocus: PropTypes.string,
 		codeMirrorChange: PropTypes.object,
-		assets: PropTypes.object,
-		references: PropTypes.object,
-		selections: PropTypes.object,
+		assets: PropTypes.object
 	},
 
 	getDefaultProps: function() {
@@ -29,7 +28,7 @@ const EditorPluginPopup = React.createClass({
 	},
 
 	getInitialState() {
-		this.popupInputFields = {};
+		this.inputFields = {};
 		return {
 			popupVisible: false,
 			xLoc: 0,
@@ -60,8 +59,6 @@ const EditorPluginPopup = React.createClass({
 		}
 
 		this.assets = (this.props.assets) ? Object.values(this.props.assets) : [];
-		this.references = (this.props.references) ? Object.values(this.props.references) : [];
-		this.selections = (this.props.selections) ? Object.values(this.props.selections) : [];
 
 
 		const change = nextProps.codeMirrorChange;
@@ -100,18 +97,6 @@ const EditorPluginPopup = React.createClass({
 	},
 	focus: function() {
 		this.popupBox.focus();
-	},
-	focusFields: function() {
-		const firstRefName = Plugins[this.state.pluginType].InputFields[0].title;
-		const firstRef = (firstRefName) ? this.popupInputFields[firstRefName] : null;
-		if (firstRef && typeof firstRef.focus === 'function') {
-			const focused = firstRef.focus();
-			if (!focused) {
-				document.body.focus();
-			}
-		} else {
-			document.body.focus();
-		}
 	},
 	onPluginClick: function(event) {
 		let clickX;
@@ -161,7 +146,17 @@ const EditorPluginPopup = React.createClass({
 				flippedY: flippedY
 			});
 
-			this.focusFields();
+
+			const firstRefName = Plugins[this.state.pluginType].InputFields[0].title;
+			const firstRef = (firstRefName) ? this.refs['pluginInput-' + firstRefName] : null;
+			if (firstRef && typeof firstRef.focus === 'function') {
+				const focused = firstRef.focus();
+				if (!focused) {
+					document.body.focus();
+				}
+			} else {
+				document.body.focus();
+			}
 
 		} else {
 			if (document.getElementById('plugin-popup').contains(event.target)) {
@@ -192,15 +187,17 @@ const EditorPluginPopup = React.createClass({
 	},
 
 	createPluginString: function(pluginType) {
+		const refs = this.refs;
 		let outputVariables = '';
 
 		const PluginInputFields = Plugins[pluginType].InputFields;
 
 		for (const pluginInputField of PluginInputFields) {
 			// Generate an output string based on the key, values in the object
+			const inputFieldType = pluginInputField.type;
 			const inputFieldTitle = pluginInputField.title;
 
-			const ref = this.popupInputFields[inputFieldTitle];
+			const ref = this.inputFields[inputFieldType];
 			const val = ref.value();
 
 			if (val && val.length) {
@@ -228,21 +225,23 @@ const EditorPluginPopup = React.createClass({
 					<div style={styles.pluginPopupTitle}>
 						{this.state.pluginType}</div>
 						{
-								PluginInputFields.map((inputField)=>{
-									const fieldType = inputField.type;
-									const fieldTitle = inputField.title;
-									const PluginInputFieldParams = inputField.params;
-									const FieldComponent = InputFields[fieldType];
-									const value = (this.state) ? this.state.values[fieldTitle] || null : null;
+							  PluginInputFields.map((inputField)=>{
 
-									return (<div key={'pluginVal-' + fieldTitle + this.state.pluginType} style={styles.pluginOptionWrapper}>
-														<label htmlFor={fieldType} style={styles.pluginOptionLabel}>{fieldTitle}</label>
-														<div style={styles.pluginPropWrapper}>
-															<FieldComponent selectedValue={value} references={this.references} assets={this.assets} selections={this.selections} {...PluginInputFieldParams} ref={(ref) => this.popupInputFields[fieldTitle] = ref}/>
-														</div>
-														<div style={styles.clearfix}></div>
-													</div>);
-								})
+								const fieldType = inputField.type;
+                const fieldTitle = inputField.title;
+                const PluginInputFieldParams = inputField.params;
+
+								const FieldComponent = InputFields[fieldType];
+								const value = (this.state) ? this.state.values[fieldTitle] || null : null;
+
+								return (<div key={'pluginVal-' + fieldType} style={styles.pluginOptionWrapper}>
+													<label htmlFor={fieldType} style={styles.pluginOptionLabel}>{FieldTitle}</label>
+													<div style={styles.pluginPropWrapper}>
+														<FieldComponent selectedValue={value} assets={this.assets} {...PluginInputFieldParams} ref={(ref) => this.inputFields[fieldTitle] = ref}/>
+													</div>
+													<div style={styles.clearfix}></div>
+												</div>);
+							})
 						}
 					<div style={styles.pluginSave} key={'pluginPopupSave'} onClick={this.onPluginSave}>
 						<FormattedMessage {...globalMessages.save} />

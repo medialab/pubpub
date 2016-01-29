@@ -20,9 +20,9 @@ import {rightBarStyles} from './rightBarStyles';
 import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
 
-import marked from '../../modules/markdown/markdown';
-import markdownExtensions from '../../components/EditorPlugins';
-marked.setExtensions(markdownExtensions);
+// import marked from '../../markdown/markdown';
+// import markdownExtensions from '../../components/EditorPlugins';
+// marked.setExtensions(markdownExtensions);
 
 let styles = {};
 
@@ -68,11 +68,16 @@ const PubReader = React.createClass({
 		const assets = convertImmutableListToObject( this.props.readerData.getIn(['pubData', 'history', versionIndex, 'assets']) );
 		const references = convertImmutableListToObject(this.props.readerData.getIn(['pubData', 'history', versionIndex, 'references']), true);
 		const selections = [];
-		const mdOutput = marked(inputMD, {assets, references, selections});
+		// const mdOutput = marked(inputMD, {assets, references, selections});
 		// console.log(inputMD);
 		this.setState({
-			htmlTree: mdOutput.tree,
-			TOC: mdOutput.travisTOCFull,
+			// htmlTree: mdOutput.tree,
+			// TOC: mdOutput.travisTOCFull,
+			inputMD: inputMD,
+			assetsObject: assets,
+			referencesObject: references,
+			selectionsArray: selections,
+			TOC: [],
 		});
 	},
 
@@ -91,10 +96,15 @@ const PubReader = React.createClass({
 			const assets = convertImmutableListToObject( nextProps.readerData.getIn(['pubData', 'history', versionIndex, 'assets']) );
 			const references = convertImmutableListToObject(nextProps.readerData.getIn(['pubData', 'history', versionIndex, 'references']), true);
 			const selections = [];
-			const mdOutput = marked(inputMD, {assets, references, selections});
+			// const mdOutput = marked(inputMD, {assets, references, selections});
 			this.setState({
-				htmlTree: mdOutput.tree,
-				TOC: mdOutput.travisTOCFull,
+				// htmlTree: mdOutput.tree,
+				// TOC: mdOutput.travisTOCFull,
+				inputMD: inputMD,
+				assetsObject: assets,
+				referencesObject: references,
+				selectionsArray: selections,
+				TOC: [],
 			});
 		}
 
@@ -212,8 +222,8 @@ const PubReader = React.createClass({
 						opacity: '0',
 					}
 				}} />
-				
-				<VideoReviews/>
+
+				{/* <VideoReviews/> */}
 
 				<div className="leftBar" style={[styles.leftBar, globalStyles[this.props.readerData.get('status')], pubData.markdown === undefined && {display: 'none'}]}>
 
@@ -263,7 +273,12 @@ const PubReader = React.createClass({
 						abstract={pubData.history[versionIndex].abstract}
 						authorsNote={pubData.history[versionIndex].authorsNote}
 						minFont={15}
-						htmlTree={this.state.htmlTree}
+						// htmlTree={this.state.htmlTree}
+						markdown={this.state.inputMD}
+						assetsObject={this.state.assetsObject}
+						referencesObject={this.state.referencesObject}
+						selectionsArray={this.state.selectionsArray}
+
 						authors={pubData.history[versionIndex].authors}
 						addSelectionHandler={this.addSelection}
 						style={pubData.history[versionIndex].style}

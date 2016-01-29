@@ -1,5 +1,5 @@
 import React from 'react';
-import RecordRTC from './RTCWrapper';
+import RecordRTC from '../../utils/RTCWrapper';
 import Radium from 'radium';
 import lodash from 'lodash';
 import Rwg from 'random-word-generator';

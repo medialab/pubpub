@@ -7,9 +7,11 @@ import DiscussionsInput from './DiscussionsInput';
 import DiscussionsScore from './DiscussionsScore';
 import smoothScroll from '../../utils/smoothscroll';
 
-import marked from '../../modules/markdown/markdown';
-import markdownExtensions from '../../components/EditorPlugins';
-marked.setExtensions(markdownExtensions);
+import {convertListToObject} from '../../utils/parsePlugins';
+import PPMComponent from '../../markdown/PPMComponent';
+// import marked from '../../markdown/markdown';
+// import markdownExtensions from '../../components/EditorPlugins';
+// marked.setExtensions(markdownExtensions);
 
 // import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
@@ -52,13 +54,14 @@ const DiscussionsItem = React.createClass({
 	},
 
 	componentDidMount() {
-		// Go through all the selections and add them to the body
-		const Marklib = require('marklib');
-		this.props.discussionItem.selections.map((selection)=>{
-			// console.log('selection', selection);
-			setTimeout(()=>{
+
+		// Timeout is to let DOM elements draw first, so they exist since everything will initially 'mount' at the same time
+		setTimeout(()=>{
+			// Go through all the selections and add them to the body
+			const Marklib = require('marklib');
+			this.props.discussionItem.selections.map((selection)=>{
 				const pIndex = this.props.pHashes[selection.ancestorHash];
-				// console.log('pIndex', pIndex);
+
 				if (pIndex) {
 					try {
 						const result = {
@@ -89,9 +92,9 @@ const DiscussionsItem = React.createClass({
 						}
 					}
 				}
-			}, 100);
 				
-		});
+			});
+		}, 10);
 		
 	},
 
@@ -110,11 +113,16 @@ const DiscussionsItem = React.createClass({
 	},
 
 	render: function() {
+
 		const discussionItem = this.props.discussionItem;
-		const assets = discussionItem.assets || [];
-		const references = discussionItem.references || [];
+		// console.log('discussionItem', discussionItem);
+		// const assets = discussionItem.assets || {};
+		// const references = discussionItem.references || {};
+
+		const assets = convertListToObject( discussionItem.assets );
+		const references = convertListToObject(discussionItem.references, true);
 		const selections = discussionItem.selections || [];
-		const md = marked(discussionItem.markdown || '', {assets, references, selections});
+		// const md = marked(discussionItem.markdown || '', {assets, references, selections});
 
 		return (
 			<div style={styles.container}>
@@ -166,8 +174,10 @@ const DiscussionsItem = React.createClass({
 					</div>
 
 					<div style={styles.discussionContent}>
-						{md.tree}
-						{/* discussionItem.markdown */}
+
+						{/* md.tree */}
+						<PPMComponent assets={assets} references={references} selections={selections} markdown={discussionItem.markdown} />
+
 					</div>
 				</div>
 				
@@ -294,7 +304,7 @@ styles = {
 	discussionContent: {
 		width: 'calc(100% - 36px - 30px)',
 		marginLeft: 36,
-		overflow: 'hidden',
+		// overflow: 'hidden',
 		fontFamily: 'Arial',
 		color: '#555',
 		fontSize: '15px',

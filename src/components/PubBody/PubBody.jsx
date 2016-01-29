@@ -14,7 +14,7 @@ import {License} from '../';
 import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
 
-import ReactTestUtils from 'react-addons-test-utils';
+import PPMComponent from '../../markdown/PPMComponent';
 
 let styles = {};
 
@@ -25,6 +25,7 @@ const PubBody = React.createClass({
 		abstract: PropTypes.string,
 		authorsNote: PropTypes.string,
 		htmlTree: PropTypes.array,
+		markdown: PropTypes.string,
 		authors: PropTypes.array,
 		addSelectionHandler: PropTypes.func,
 		style: PropTypes.object,
@@ -32,7 +33,12 @@ const PubBody = React.createClass({
 		isFeatured: PropTypes.bool,
 		errorView: PropTypes.bool,
 
+		assetsObject: PropTypes.object,
+		referencesObject: PropTypes.object,
+		selectionsArray: PropTypes.array,
+
 		references: PropTypes.array,
+
 		minFont: PropTypes.number,
 		firstPublishedDate: PropTypes.string,
 		lastPublishedDate: PropTypes.string
@@ -41,6 +47,7 @@ const PubBody = React.createClass({
 		return {
 			htmlTree: [],
 			authors: [],
+			text: '',
 			style: {
 				type: 'science',
 				googleFontURL: undefined,
@@ -173,7 +180,8 @@ const PubBody = React.createClass({
 
 					<div id="pubBodyContent">
 						{/* For Highlights to work, no divs can be placed before htmlTree */}
-						{this.props.htmlTree}
+						{/* this.props.htmlTree */}
+						<PPMComponent assets={this.props.assetsObject} references={this.props.referencesObject} selections={this.props.selectionsArray} markdown={this.props.markdown} />
 
 						{this.props.addSelectionHandler
 							? <PubSelectionPopup addSelectionHandler={this.props.addSelectionHandler}/>
@@ -205,8 +213,8 @@ const PubBody = React.createClass({
 						? <License />
 						: null
 					}
-					
-					
+
+
 				</div>
 
 			</div>

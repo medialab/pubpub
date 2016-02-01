@@ -1,5 +1,12 @@
 import React, {PropTypes} from 'react';
 import createPubPubPlugin from './PubPub';
+import Timer from '../../utils/Timer';
+import Portal from '../../utils/Portal';
+import hhmmss from 'hhmmss';
+
+
+import { default as Video, Controls, Play, Mute, Time, Overlay } from 'react-html5video';
+
 
 let styles = {};
 let Rangy = null;
@@ -26,28 +33,6 @@ const VideoReviewsConfig = {
 	autocomplete: false
 };
 
-const Portal = React.createClass({
-  render: () => null,
-  portalElement: null,
-  componentDidMount() {
-    let portal = this.props.portalId && document.getElementById(this.props.portalId);
-    if (!portal) {
-      portal = document.createElement('div');
-      portal.id = this.props.portalId;
-      document.body.appendChild(portal);
-    }
-    this.portalElement = portal;
-    this.componentDidUpdate();
-  },
-  componentWillUnmount() {
-    document.body.removeChild(this.portalElement);
-  },
-  componentDidUpdate() {
-    React.render(<div {...this.props}>{this.props.children}</div>, this.portalElement);
-  }
-});
-
-
 const VideoReviewPlugin = React.createClass({
 	propTypes: {
 		name: PropTypes.string,
@@ -55,7 +40,7 @@ const VideoReviewPlugin = React.createClass({
 		caption: PropTypes.string
 	},
 	getInitialState: function() {
-		return {playing: false};
+		return {loaded: false, playing: false, paused: false, timers: []};
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;
@@ -67,22 +52,59 @@ const VideoReviewPlugin = React.createClass({
 		require('rangy/lib/rangy-selectionsaverestore.js');
 		this.Marklib = Marklib;
 		Rangy.init();
+		this.fetchRecording();
 	},
 
 	fetchRecording: function() {
 		// this.restoreSelections(this.actions);
-		xhrGet('http://videoreviews.herokuapp.com/fetch', function(review) {
-			this.restoreSelections(review.actions);
-			this.playVideo(review.video);
-			this.setState({playing: true});
+		xhrGet(`http://videoreviews.herokuapp.com/fetch?video=${this.props.name}`, function(review) {
+			if (review && review.actions) {
+				this.setState({loaded: true, actions: review.actions, video: review.video, duration: review.duration});
+			} else {
+				this.setState({error: true});
+
+			}
 		}.bind(this));
 	},
 
-	playVideo: function(videoName) {
-    console.log('this');
-		// this.cameraPreview.src = 'http://videoreviews.herokuapp.com/uploads/' + _fileName;
-		this.cameraPreview.src = 'http://videoreview.s3-website-us-west-2.amazonaws.com/' + videoName;
+
+	play: function() {
+		// debugger;
+		this.restoreSelections(this.state.actions);
 		this.cameraPreview.play();
+		this.cameraPreview.videoEl.addEventListener('ended', this.finished, false);
+		this.cameraPreview.videoEl.addEventListener('pause', this.pause, false);
+
+		this.setState({playing: true});
+	},
+
+	finished: function(event) {
+		this.setState({playing: false, paused: false});
+	},
+
+	pause: function() {
+		// this.cameraPreview.pause();
+		this.cameraPreview.videoEl.addEventListener('play', this.resume, false);
+
+		this.setState({paused: true});
+		this.pauseSelections();
+	},
+	resume: function() {
+		this.cameraPreview.videoEl.removeEventListener('play', this.resume, false);
+		this.setState({paused: false});
+		this.resumeSelections();
+	},
+
+	pauseSelections: function() {
+		for (const timer of this.state.timers) {
+			timer.pause();
+		}
+	},
+
+	resumeSelections: function() {
+		for (const timer of this.state.timers) {
+			timer.resume();
+		}
 	},
 
 	restoreSelections: function(actions) {
@@ -90,19 +112,22 @@ const VideoReviewPlugin = React.createClass({
 		let lastSelection = null;
 
 		const playSelection = function(action) {
+			try {
+				const range = action.range;
+				if (lastSelection) {
+					lastSelection.destroy();
+				}
+				// const rendering = new Marklib.Rendering(pubContent);
 
-			const range = action.range;
-			if (lastSelection) {
-				lastSelection.destroy();
-			}
-			// const rendering = new Marklib.Rendering(pubContent);
-
-			if (range !== '') {
-				const rendering = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
-				rendering.renderWithResult(range);
-				lastSelection = rendering;
-			} else {
-				lastSelection = null;
+				if (range !== '') {
+					const rendering = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
+					rendering.renderWithResult(range);
+					lastSelection = rendering;
+				} else {
+					lastSelection = null;
+				}
+			} catch (err) {
+				console.warn('Selection Playback error!');
 			}
 		};
 
@@ -121,32 +146,69 @@ const VideoReviewPlugin = React.createClass({
 			}
 		}.bind(this);
 
+		const timers = [];
 
 		for (const action of actions) {
 			if (action.type === 'select') {
-				setTimeout(playSelection.bind(this, action), action.time);
+				timers.push(new Timer(playSelection.bind(this, action), action.time));
+				// setTimeout(playSelection.bind(this, action), action.time);
 			} else if (action.type === 'scroll') {
-				setTimeout(playScroll.bind(this, action), action.time);
+				timers.push(new Timer(playScroll.bind(this, action), action.time));
+				// setTimeout(playScroll.bind(this, action), action.time);
 			} else if (action.type === 'mouse') {
-				setTimeout(playMouse.bind(this, action), action.time);
+				timers.push(new Timer(playMouse.bind(this, action), action.time));
+				// setTimeout(playMouse.bind(this, action), action.time);
 			}
 		}
+
+		this.setState({timers: timers});
 
 	},
 
 	render: function() {
-		console.log('RE-RENDERINGGG');
+
+		let elem;
+		if (this.state.loaded) {
+			elem = (<span style={styles.button} onClick={this.play}>
+				📹 {(this.state.duration) ? `- ${hhmmss(this.state.duration / 1000)}` : null } - {this.props.name}
+			</span>);
+		} else if (!this.state.error) {
+			elem = <span style={styles.button}>Loading Video Comment</span>;
+		} else {
+			elem = <span style={styles.button}>Error Loading Video Comment</span>;
+		}
+
 		return (
 			<div>
-			<span style={styles.button} onClick={this.fetchRecording}> CLICK ME</span>
-      <Portal>
-        <div ref={(ref) => this.mouseElem = ref} style={styles.mouse}/>
-      </Portal>
-			<div style={styles.wrapper}>
-			<p style={styles.camera(this.state.playing)}>
-			<video id="camera-preview" ref={(ref) => this.cameraPreview = ref} style={styles.preview}></video>
-			</p>
-			</div>
+				{elem}
+				<Portal>
+					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}/>
+				</Portal>
+				<div style={styles.wrapper}>
+					{ (this.state.loaded) ?
+						<div style={styles.camera(this.state.playing)}>
+							<Video
+								style={styles.preview}
+								id="camera-preview"
+								ref={(ref) => this.cameraPreview = ref}
+								controls
+								preload
+								>
+								<h1 style={styles.videoHeader}>Video comment by Thariq</h1>
+								<source src={(this.state.video) ? 'http://videoreview.s3-website-us-west-2.amazonaws.com/' + this.state.video : null} type="video/webm" />
+								<Overlay />
+								<Controls>
+									<Play />
+									<Time />
+									<Mute />
+								</Controls>
+							</Video>
+							{/* <DiscussionsInput />*/}
+						</div>
+						:
+						null
+					}
+				</div>
 			</div>
 		);
 	}
@@ -163,6 +225,15 @@ styles = {
 		}
 		return cameraStyle;
 	},
+	videoHeader: {
+		position: 'absolute',
+		top: '-1em',
+		backgroundColor: 'black',
+		fontSize: '1em',
+		width: '100%',
+		textAlign: 'center',
+		fontWeight: '300',
+	},
 	preview: {
 		border: 'none',
 		width: '100%'
@@ -175,10 +246,13 @@ styles = {
 		position: 'fixed',
 		top: '10px',
 		left: 'calc(61vw - 250px)',
-		width: '250px',
-		height: '250px',
 		zIndex: '10000000',
-    opacity: 0.75
+		opacity: 0.75
+	},
+	comment: {
+		display: 'block',
+		width: '100%',
+		height: '1.5em',
 	},
 	mouse: {
 		position: 'absolute',
@@ -190,7 +264,5 @@ styles = {
 		backgroundImage: 'url("http://www.szczepanek.pl/icons.grass/v.0.1/img/standard/gui-pointer.gif")',
 	},
 };
-
-
 
 export default createPubPubPlugin(VideoReviewPlugin, VideoReviewsConfig, VideoReviewsInputFields);

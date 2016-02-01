@@ -332,7 +332,7 @@ const PubReader = React.createClass({
 								{this.props.readerData.get('showPubHighlights')
 									? <FormattedMessage {...globalMessages.off}/>
 									: <FormattedMessage {...globalMessages.on}/> }
-								</span>
+							</span>
 						</div>
 					</div>
 

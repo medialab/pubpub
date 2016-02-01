@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {PropTypes} from 'react';
 import RecordRTC from '../../utils/RTCWrapper';
 import Radium from 'radium';
 import lodash from 'lodash';
@@ -19,20 +19,10 @@ function xhr(url, data, callback) {
 	request.send(data);
 }
 
-function xhrGet(url, callback) {
-	const request = new XMLHttpRequest();
-	request.onreadystatechange = function() {
-		if (request.readyState === 4 && request.status === 200) {
-			callback(JSON.parse(request.responseText));
-		}
-	};
-	request.open('GET', url);
-	request.send();
-}
-
-
 const VideoReviews = React.createClass({
-
+	propTypes: {
+		onSave: PropTypes.func
+	},
 	getInitialState: function() {
 		this.recordAudio = null;
 		this.recordVideo = null;
@@ -72,82 +62,12 @@ const VideoReviews = React.createClass({
 		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
 		document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
 
-		xhr('http://videoreviews.herokuapp.com/record', JSON.stringify(this.actions), function(fileName) {
+		const duration = new Date().getTime() - this.startRecordingDate;
+		const videoData = {actions: this.actions, duration: duration};
+
+		xhr('http://videoreviews.herokuapp.com/record', JSON.stringify(videoData), function(fileName) {
 			console.log(fileName);
 		});
-	},
-
-	fetchRecording: function() {
-		// this.restoreSelections(this.actions);
-		xhrGet('http://videoreviews.herokuapp.com/fetch', function(review) {
-			this.restoreSelections(review.actions);
-			this.playVideo(review.video);
-			this.setState({playing: true});
-		}.bind(this));
-	},
-
-	playVideo: function(videoName) {
-		// this.cameraPreview.src = 'http://videoreviews.herokuapp.com/uploads/' + _fileName;
-		this.cameraPreview.src = 'http://videoreview.s3-website-us-west-2.amazonaws.com/' + videoName;
-		this.cameraPreview.play();
-	},
-
-	restoreSelections: function(actions) {
-
-		let lastSelection = null;
-
-		const playSelection = function(action) {
-
-			const range = action.range;
-			if (lastSelection) {
-				lastSelection.destroy();
-			}
-			// const rendering = new Marklib.Rendering(pubContent);
-
-			if (range !== '') {
-				const rendering = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
-				rendering.renderWithResult(range);
-				lastSelection = rendering;
-			} else {
-				lastSelection = null;
-			}
-
-			/*
-			const rangeInfos = sel.rangeInfos;
-			for (const range of rangeInfos) {
-				range.document = window.document;
-			}
-			sel.rangeInfos = rangeInfos;
-			Rangy.restoreSelection(sel);
-			*/
-		};
-
-		const playScroll = function(scroll) {
-			const pos = scroll.pos;
-			document.querySelector('.centerBar').scrollTop = pos;
-		};
-
-		const playMouse = function(mouse) {
-			try {
-				const pos = mouse.pos;
-				this.mouseElem.style.left = pos.x + 'px';
-				this.mouseElem.style.top = pos.y + 'px';
-			} catch (err) {
-				console.log(err);
-			}
-		}.bind(this);
-
-
-		for (const action of actions) {
-			if (action.type === 'select') {
-				setTimeout(playSelection.bind(this, action), action.time);
-			} else if (action.type === 'scroll') {
-				setTimeout(playScroll.bind(this, action), action.time);
-			} else if (action.type === 'mouse') {
-				setTimeout(playMouse.bind(this, action), action.time);
-			}
-		}
-
 	},
 
 	mouse: function(evt) {
@@ -214,7 +134,6 @@ const VideoReviews = React.createClass({
 
 		this.state.recording = true;
 
-
 		document.addEventListener('selectionchange', this.selected);
 		document.querySelector('.centerBar').addEventListener('scroll', this.scroll);
 		document.getElementById('pubContent').addEventListener('mousemove', this.mouse);
@@ -257,6 +176,7 @@ const VideoReviews = React.createClass({
 		this.state.recording = false;
 		this.forceUpdate();
 
+		this.duration = new Date().getTime() - this.startRecordingDate;
 
 		document.removeEventListener('selectionchange', this.selected);
 		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
@@ -292,8 +212,6 @@ const VideoReviews = React.createClass({
 		const fileName = new Rwg().generate();
 		const files = { };
 
-		console.log('filename is' + fileName);
-
 		files.audio = {
 			name: fileName + (this.isFirefox ? '.webm' : '.wav'),
 			type: this.isFirefox ? 'video/webm' : 'audio/wav',
@@ -301,6 +219,7 @@ const VideoReviews = React.createClass({
 		};
 
 		files.actions = actions;
+		files.duration = this.duration;
 
 		if (!this.isFirefox) {
 			files.video = {
@@ -312,31 +231,39 @@ const VideoReviews = React.createClass({
 
 		files.isFirefox = this.isFirefox;
 
-		this.cameraPreview.src = '';
-		this.cameraPreview.poster = 'http://videoreviews.herokuapp.com/ajax-loader.gif';
+		this.setState({uploading: true});
 
 		xhr('http://videoreviews.herokuapp.com/upload', JSON.stringify(files), function(_fileName) {
-			console.log(_fileName);
+
+			this.props.onSave(_fileName);
+			// console.log(_fileName);
 			// const href = location.href.substr(0, location.href.lastIndexOf('/') + 1);
-			this.cameraPreview.src = 'http://videoreviews.herokuapp.com/uploads/' + _fileName;
-			this.cameraPreview.play();
+			// this.cameraPreview.src = 'http://videoreviews.herokuapp.com/uploads/' + _fileName;
+			// this.cameraPreview.play();
 		}.bind(this));
 
 	},
 
 	render: function() {
-		console.log('RE-RENDERINGGG');
+
+		let button;
+		if (this.state.uploading) {
+			button = <button disabled>Uploading</button>;
+		} else if (this.state.recording) {
+			button = <button id="stop-recording" onClick={this.stopRecording}>Stop Recording</button>;
+		} else {
+			button = <button id="start-recording" onClick={this.startRecording}>Record Video Comment</button>;
+		}
+
 		return (
-			<div>
+			<div style={styles.modal}>
 				<div ref={(ref) => this.mouseElem = ref} style={styles.mouse}/>
-				<div style={styles.wrapper}>
-					<p style={styles.camera(this.state.recording || this.state.playing)}>
+				<div>
+					<p style={styles.show(true)}>
 						<video id="camera-preview" ref={(ref) => this.cameraPreview = ref} controls style={styles.preview}></video>
 					</p>
 					<div>
-						<button id="start-recording" onClick={this.startRecording}>Start</button>
-						<button id="stop-recording" onClick={this.stopRecording}>Stop</button>
-						<button id="stop-recording" onClick={this.fetchRecording}>Play</button>
+						{button}
 					</div>
 				</div>
 			</div>
@@ -345,7 +272,7 @@ const VideoReviews = React.createClass({
 });
 
 styles = {
-	camera: function(recording) {
+	show: function(recording) {
 		const cameraStyle = {};
 		if (recording) {
 			cameraStyle.display = 'block';
@@ -357,6 +284,16 @@ styles = {
 	preview: {
 		border: '1px solid rgb(15, 158, 238)',
 		width: '94%'
+	},
+	modal: {
+		display: 'block',
+		height: '100vh',
+		width: '37vw',
+		position: 'fixed',
+		top: '30px',
+		right: '0px',
+		backgroundColor: 'whitesmoke',
+		zIndex: '1000',
 	},
 	wrapper: {
 		position: 'fixed',
@@ -373,7 +310,7 @@ styles = {
 		width: '20px',
 		height: '20px',
 		zIndex: '1000000000',
-		backgroundColor: 'red'
+		backgroundImage: 'url("http://www.szczepanek.pl/icons.grass/v.0.1/img/standard/gui-pointer.gif")',
 	},
 };
 

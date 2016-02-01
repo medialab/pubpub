@@ -7,6 +7,7 @@ import {globalStyles} from '../../utils/styleConstants';
 
 import {globalMessages} from '../../utils/globalMessages';
 import {injectIntl, FormattedMessage} from 'react-intl';
+import VideoReviews from '../../components/VideoReviews/VideoReviews';
 
 let styles = {};
 
@@ -36,7 +37,7 @@ const PubDiscussionsInput = React.createClass({
 
 	componentDidMount() {
 		initCodeMirrorMode();
-		
+
 		const cmOptions = {
 			lineNumbers: false,
 			value: '',
@@ -49,7 +50,7 @@ const PubDiscussionsInput = React.createClass({
 		};
 
 		const codeMirror = CodeMirror(document.getElementById(this.props.codeMirrorID), cmOptions);
-		codeMirror.on('change', this.onEditorChange);	
+		codeMirror.on('change', this.onEditorChange);
 	},
 
 	componentWillReceiveProps(nextProps) {
@@ -65,9 +66,9 @@ const PubDiscussionsInput = React.createClass({
 			// const cm = document.getElementsByClassName('CodeMirror')[0].CodeMirror;
 			const cm = document.getElementById(this.props.codeMirrorID).childNodes[0].CodeMirror;
 			const spacing = cm.getValue().length ? ' ' : '';
-			cm.setValue(cm.getValue() + spacing + '[[selection: index=' + nextProps.newDiscussionData.get('selections').size + ']] ' );	
+			cm.setValue(cm.getValue() + spacing + '[[selection: index=' + nextProps.newDiscussionData.get('selections').size + ']] ' );
 		}
-		
+
 	},
 
 	onEditorChange: function(cm, change) {
@@ -75,6 +76,15 @@ const PubDiscussionsInput = React.createClass({
 		// console.log(cm);
 	},
 
+	startVideoReview: function() {
+		this.setState({videoRecording: true});
+	},
+	receiveVideoReview: function(videoName) {
+		const cm = document.getElementById(this.props.codeMirrorID).childNodes[0].CodeMirror;
+		const spacing = cm.getValue().length ? ' ' : '';
+		cm.setValue(cm.getValue() + spacing + '[[videoreview: name=' + videoName + ']] ' );
+		this.setState({videoRecording: false});
+	},
 	submitDiscussion: function() {
 		const newDiscussion = {};
 		// const cm = document.getElementsByClassName('CodeMirror')[0].CodeMirror;
@@ -106,7 +116,7 @@ const PubDiscussionsInput = React.createClass({
 
 				<div style={styles.inputTopLine}>
 					<div style={styles.thumbnail}>
-						{this.props.userThumbnail 
+						{this.props.userThumbnail
 							? <img style={styles.thumbnailImage}src={this.props.userThumbnail} />
 							: null
 						}
@@ -130,6 +140,11 @@ const PubDiscussionsInput = React.createClass({
 				</div>
 
 				<div style={styles.inputBottomLine}>
+					<div style={styles.videoButton} key={'videoSubmit'} onClick={this.startVideoReview}>
+						📹 Record Video Comment
+						{(this.state.videoRecording) ? <VideoReviews onSave={this.receiveVideoReview}/> : null}
+					</div>
+
 					<div style={styles.submitButton} key={'newDiscussionSubmit'} onClick={this.submitDiscussion}>
 						<FormattedMessage {...globalMessages.Submit}/>
 					</div>
@@ -194,7 +209,7 @@ styles = {
 	topCheckbox: {
 		float: 'right',
 		height: 20,
-		
+
 		userSelect: 'none',
 		color: globalStyles.sideText,
 		':hover': {
@@ -210,6 +225,16 @@ styles = {
 	checkboxInput: {
 		cursor: 'pointer',
 	},
+	videoButton: {
+		float: 'left',
+		color: globalStyles.sideText,
+		fontSize: '0.8em',
+		padding: '0px 5px',
+		':hover': {
+			cursor: 'pointer',
+			color: globalStyles.sideHover,
+		}
+	},
 	submitButton: {
 		float: 'right',
 		color: globalStyles.sideText,
@@ -218,7 +243,6 @@ styles = {
 			cursor: 'pointer',
 			color: globalStyles.sideHover,
 		}
-
 	},
 
 };

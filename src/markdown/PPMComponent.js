@@ -15,6 +15,8 @@ import InputFields from '../components/EditorPluginFields/index';
 
 import MathComponent from './MathComponent';
 
+import murmur from 'murmurhash';
+
 const MathOptions = {
 	inlineOpen: '$$',
 	inlineClose: '$$',
@@ -54,43 +56,27 @@ const PPMComponent = React.createClass({
 
 	handleIterate: function(globals, Tag, props, children) {
 		let Component = Tag;
-		const id = children[0] && children[0].replace ? children[0].replace(/\s/g, '-').toLowerCase() : undefined;
 
 		switch(Tag) {
 		case 'h1': 
-			globals.toc.push({id: id, title: children[0], level: 1,});
-			globals.tocH1.push({id: id, title: children[0], level: 1,});
-			props.id = id;
-			break;
 		case 'h2': 
-			globals.toc.push({ id: id, title: children[0], level: 2,});
-			props.id = id;
-			break;
 		case 'h3': 
-			globals.toc.push({ id: id, title: children[0], level: 3,});
-			props.id = id;
-			break;
 		case 'h4': 
-			globals.toc.push({ id: id, title: children[0], level: 4,});
-			props.id = id;
-			break;
 		case 'h5': 
-			globals.toc.push({ id: id, title: children[0], level: 5,});
-			props.id = id;
-			break;
 		case 'h6': 
-			globals.toc.push({ id: id, title: children[0], level: 6,});
-			props.id = id;
+			props.id = children[0] && children[0].replace ? children[0].replace(/\s/g, '-').toLowerCase() : undefined;
 			break;
 
 		case 'table':
 			props.className = 'table table-striped';
 			break;
+
 		case 'div':
 			if (props['data-info']) {
 				props.className = props.className ? props.className + props['data-info'] : props['data-info'];
 			}
 			break;
+
 		case 'ppm':
 			props.className = 'ppm';
 			if (children.length > 1) {
@@ -104,11 +90,12 @@ const PPMComponent = React.createClass({
 				return <div className={'linebreak p-block'} style={{display: 'block', height: '1.5em'}}></div>
 			}
 
-
 			const pluginName = children[0].split(':')[0];
 			const plugin = Plugins[pluginName];
 			if (!plugin) {
-				console.warn('Could not find a plugin');
+				if (__DEVELOPMENT__) {
+					console.warn('Could not find a plugin');
+				}
 				return <span {...props}>{children}</span>;
 			}
 
@@ -139,16 +126,30 @@ const PPMComponent = React.createClass({
 
 		case 'code':
 			if (props['data-language']) {
-				return <Tag {...props} className={'codeBlock'} dangerouslySetInnerHTML={{__html: window.hljs.highlight(props['data-language'], children[0]).value}} />
-			};
+				try{
+					return <Tag {...props} className={'codeBlock'} dangerouslySetInnerHTML={{__html: window.hljs.highlight(props['data-language'], children[0]).value}} />	
+				} catch (err) {
+					// console.log(err);
+				}
+				
+			}
+			props.className = 'codeBlock';
 			break;
+
 		case 'math':
 			return <MathComponent>{children[0]}</MathComponent>;
-				break;
-				case 'p':
-				props.className = 'p-block';
-				Component = 'div';
-				break;
+			break;
+
+		case 'p':
+			// if (children[0] === null){ return null; }
+			props.className = 'p-block';
+			props['data-hash'] = murmur.v2(children[0]);
+			Component = 'div';
+			break;
+		case 'li':
+			props['data-hash'] = murmur.v2(children[0]);
+			break;
+
 		}
 
 		return <Component {...props}>{children}</Component>;
@@ -156,26 +157,27 @@ const PPMComponent = React.createClass({
 
 	render: function() {
 		for (const member in this.globals) delete this.globals[member];
-		this.globals.tocH1 = [];
-		this.globals.toc = [];
 
 		return (
-			<MDReactComponent
-				text={this.props.markdown}
-				onIterate={this.handleIterate.bind(this, this.globals)}
-				markdownOptions={{
-					typographer: true,
-					linkify: true,
-				}}
-				plugins={[
-					abbr,
-					emoji,
-					sub,
-					sup,
-					{plugin: mathIt, args: [MathOptions]},
-					{plugin: container, args: ['blank', {validate: ()=>{return true;}}]},
-					ppm
-				]} />
+			<div>
+				<MDReactComponent
+					text={this.props.markdown}
+					onIterate={this.handleIterate.bind(this, this.globals)}
+					markdownOptions={{
+						typographer: true,
+						linkify: true,
+					}}
+					plugins={[
+						abbr,
+						emoji,
+						sub,
+						sup,
+						{plugin: mathIt, args: [MathOptions]},
+						{plugin: container, args: ['blank', {validate: ()=>{return true;}}]},
+						ppm
+					]} />
+			</div>
+			
 		);
 	}
 });

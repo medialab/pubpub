@@ -46,10 +46,10 @@ app.post('/addDiscussion', function(req, res) {
 			var pubID = result.pub;
 
 			if (req.body.isEditorComment) {
-				console.log('got an editor comment!');
+				// console.log('got an editor comment!');
 				Pub.update({ _id: pubID }, { $addToSet: { editorComments: discussionID} }, function(err, result){if(err) return handleError(err)});
 			} else {
-				console.log('got a discussion!');
+				// console.log('got a discussion!');
 				Pub.update({ _id: pubID }, { $addToSet: { discussions: discussionID} }, function(err, result){if(err) return handleError(err)});
 				User.update({ _id: userID }, { $addToSet: { discussions: discussionID} }, function(err, result){if(err) return handleError(err)});
 			}
@@ -101,4 +101,20 @@ app.post('/discussionVote', function(req,res){
 	}
 
 	return res.status(201).json(true);
+});
+
+app.post('/discussionArchive', function(req,res){
+	if (!req.user) {return res.status(504).json('Not logged in');}
+
+	const discussionID = req.body.objectID;
+
+	Discussion.findOne({_id:discussionID}).exec(function (err, discussion) {
+		
+		discussion.archived = !discussion.archived;
+
+		discussion.save(function(err, result){
+			return res.status(201).json(result);
+		});
+	});
+
 });

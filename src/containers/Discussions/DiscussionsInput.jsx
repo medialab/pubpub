@@ -13,7 +13,7 @@ let styles = {};
 
 // import {loadCss} from '../../utils/loadingFunctions';
 import initCodeMirrorMode from '../../containers/Editor/editorCodeMirrorMode';
-import {codeMirrorStyles} from '../../containers/Editor/editorStyles';
+import {codeMirrorStyles} from '../../containers/Editor/codeMirrorStyles';
 import {clearTempHighlights} from '../../components/PubSelectionPopup/selectionFunctions';
 
 // import marked from '../../modules/markdown/markdown';
@@ -107,11 +107,14 @@ const PubDiscussionsInput = React.createClass({
 						backgroundColor: 'transparent',
 						fontSize: '15px',
 						color: '#555',
-						fontFamily: 'Arial',
+						fontFamily: 'Helvetica Neue,Helvetica,Arial,sans-serif',
 						padding: '0px 20px',
 						width: 'calc(100% - 40px)',
 						minHeight: '25px',
-					}
+					},
+					'.inputCodeMirror .CodeMirror-placeholder': {
+						color: '#aaa',
+					},
 				}} />
 
 				<div style={styles.inputTopLine}>
@@ -160,7 +163,7 @@ export default injectIntl(Radium(PubDiscussionsInput));
 styles = {
 	container: {
 		width: '100%',
-		// overflow: 'hidden',
+		overflow: 'hidden',
 		margin: '20px 0px',
 		position: 'relative',
 	},
@@ -179,7 +182,7 @@ styles = {
 	inputBox: {
 		border: '1px solid #ddd',
 		backgroundColor: '#fff',
-		// minHeight: 25,
+		minHeight: 25,
 		padding: '10px 0px',
 	},
 	loaderContainer: {

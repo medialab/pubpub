@@ -18,11 +18,8 @@ import {globalStyles, pubSizes} from '../../utils/styleConstants';
 import {rightBarStyles} from './rightBarStyles';
 
 import {globalMessages} from '../../utils/globalMessages';
+import {generateTOC} from '../../markdown/generateTOC';
 import {FormattedMessage} from 'react-intl';
-
-// import marked from '../../markdown/markdown';
-// import markdownExtensions from '../../components/EditorPlugins';
-// marked.setExtensions(markdownExtensions);
 
 let styles = {};
 
@@ -68,16 +65,14 @@ const PubReader = React.createClass({
 		const assets = convertImmutableListToObject( this.props.readerData.getIn(['pubData', 'history', versionIndex, 'assets']) );
 		const references = convertImmutableListToObject(this.props.readerData.getIn(['pubData', 'history', versionIndex, 'references']), true);
 		const selections = [];
-		// const mdOutput = marked(inputMD, {assets, references, selections});
-		// console.log(inputMD);
+		const toc = generateTOC(inputMD).full;
+
 		this.setState({
-			// htmlTree: mdOutput.tree,
-			// TOC: mdOutput.travisTOCFull,
 			inputMD: inputMD,
 			assetsObject: assets,
 			referencesObject: references,
 			selectionsArray: selections,
-			TOC: [],
+			TOC: toc,
 		});
 	},
 
@@ -96,15 +91,14 @@ const PubReader = React.createClass({
 			const assets = convertImmutableListToObject( nextProps.readerData.getIn(['pubData', 'history', versionIndex, 'assets']) );
 			const references = convertImmutableListToObject(nextProps.readerData.getIn(['pubData', 'history', versionIndex, 'references']), true);
 			const selections = [];
-			// const mdOutput = marked(inputMD, {assets, references, selections});
+			const toc = generateTOC(inputMD).full;
+
 			this.setState({
-				// htmlTree: mdOutput.tree,
-				// TOC: mdOutput.travisTOCFull,
 				inputMD: inputMD,
 				assetsObject: assets,
 				referencesObject: references,
 				selectionsArray: selections,
-				TOC: [],
+				TOC: toc,
 			});
 		}
 
@@ -192,8 +186,13 @@ const PubReader = React.createClass({
 			const srcRegex = /{{image:.*(source=([^\s,]*)).*}}/;
 			const match = srcRegex.exec(pubData.history[versionIndex].markdown);
 			const refName = match ? match[2] : undefined;
+<<<<<<< HEAD
 
 			let leadImage = undefined;
+=======
+			
+			let leadImage = '';
+>>>>>>> master
 			for (let index = pubData.history[versionIndex].assets.length; index--;) {
 				if (pubData.history[versionIndex].assets[index].refName === refName) {
 					leadImage = pubData.history[versionIndex].assets[index].url_s3;
@@ -201,10 +200,9 @@ const PubReader = React.createClass({
 				}
 			}
 
-			if (leadImage) {
-				metaData.meta.push({property: 'og:image', content: leadImage});
-				metaData.meta.push({name: 'twitter:image', content: leadImage});
-			}
+			metaData.meta.push({property: 'og:image', content: leadImage});
+			metaData.meta.push({name: 'twitter:image', content: leadImage});
+			
 		} else {
 			metaData.title = 'PubPub - ' + this.props.slug;
 		}
@@ -241,7 +239,7 @@ const PubReader = React.createClass({
 
 				</div>
 
-				<div className="centerBar" style={[styles.centerBar, this.props.readerData.get('activeModal') !== undefined && styles.centerBarModalActive]}>
+				<div className="centerBar pubScrollContainer" style={[styles.centerBar, this.props.readerData.get('activeModal') !== undefined && styles.centerBarModalActive]}>
 
 					<PubNav
 						height={this.height}
@@ -444,8 +442,9 @@ styles = {
 		float: 'left',
 		overflow: 'hidden',
 		overflowY: 'scroll',
+		WebkitOverflowScrolling: 'touch',
 		boxShadow: '0px 2px 4px 0px rgba(0,0,0,0.4)',
-		zIndex: 10,
+		zIndex: 65,
 		// Mobile
 		'@media screen and (min-resolution: 3dppx), screen and (max-width: 767px)': {
 			width: '100%',

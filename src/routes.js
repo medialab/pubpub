@@ -1,6 +1,6 @@
 import React from 'react';
 import {IndexRoute, Route} from 'react-router';
-import {App, Collection, Editor, Explore, JournalCreate, JournalProfile, Landing, NotFound, PubCreate, PubMeta, PubReader, ResetPassword, SubdomainTest, UserProfile} from 'containers';
+import {App, Collection, Editor, Explore, GroupCreate, GroupProfile, JournalCreate, JournalProfile, Landing, NotFound, PubCreate, PubMeta, PubReader, ResetPassword, SubdomainTest, UserProfile} from 'containers';
 
 export default () => {
 
@@ -17,6 +17,10 @@ export default () => {
 
 			<Route path="/explore" component={Explore}/>
 
+			<Route path="/group/:groupSlug" component={GroupProfile}/>
+			<Route path="/group/:groupSlug/:mode" component={GroupProfile}/>
+			
+			<Route path="/groups/create" component={GroupCreate}/>
 
 			<Route path="/journal/:subdomain" component={JournalProfile}/>
 			<Route path="/journal/:subdomain/:mode" component={JournalProfile}/>
@@ -25,7 +29,7 @@ export default () => {
 			<Route path="/journals/create" component={JournalCreate}/>
 
 			<Route path="/pub/:slug" component={PubReader}/>
-			<Route path="/pub/:slug/edit" component={Editor}/>
+			<Route path="/pub/:slug/draft" component={Editor}/>
 			<Route path="/pub/:slug/:meta" component={PubMeta}/>
 			<Route path="/pub/:slug/:meta/:metaID" component={PubMeta}/> // Used for discussions
 

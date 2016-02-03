@@ -29,6 +29,10 @@ import {
 	DISCUSSION_VOTE_SUCCESS,
 	DISCUSSION_VOTE_FAIL,
 
+	ARCHIVE_DISCUSSION_LOAD,
+	ARCHIVE_DISCUSSION_SUCCESS,
+	ARCHIVE_DISCUSSION_FAIL,
+
 	PUB_NAV_OUT,
 	PUB_NAV_IN,
 
@@ -288,8 +292,28 @@ function discussionVote(state, voteType, discussionID, userYay, userNay) {
 		discussions.map((discussion)=>{
 			if (discussion._id === discussionID) {
 				discussion[voteType === 'yay' ? 'yays' : 'nays'] += scoreChange;
+				discussion.points += (voteType === 'yay' ? 1 : -1) * scoreChange;
 				discussion.userYay = newUserYay;
 				discussion.userNay = newUserNay;
+			}
+			if (discussion.children && discussion.children.length) {
+				findDiscussionAndChange(discussion.children);
+			}
+		});
+	}
+
+	const discussionsArray = state.getIn(['pubData', 'discussions']).toJS();
+	findDiscussionAndChange(discussionsArray);
+
+	return state.mergeIn(['pubData', 'discussions'], discussionsArray);
+}
+
+function archiveDiscussion(state, discussionID) {
+
+	function findDiscussionAndChange(discussions) {
+		discussions.map((discussion)=>{
+			if (discussion._id === discussionID) {
+				discussion.archived = !discussion.archived;
 			}
 			if (discussion.children && discussion.children.length) {
 				findDiscussionAndChange(discussion.children);
@@ -368,9 +392,15 @@ export default function readerReducer(state = defaultState, action) {
 	case DISCUSSION_VOTE:
 		return discussionVote(state, action.voteType, action.discussionID, action.userYay, action.userNay);
 	case DISCUSSION_VOTE_SUCCESS:
-		// return discussionVoteSuccess(state, action.result);
 		return state;
 	case DISCUSSION_VOTE_FAIL:
+		return state;
+
+	case ARCHIVE_DISCUSSION_LOAD:
+		return archiveDiscussion(state, action.objectID);
+	case ARCHIVE_DISCUSSION_SUCCESS:
+		return state;
+	case ARCHIVE_DISCUSSION_FAIL:
 		return state;
 
 	case SUBMIT_PUB_TO_JOURNAL:

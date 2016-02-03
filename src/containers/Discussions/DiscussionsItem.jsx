@@ -5,13 +5,9 @@ import { Link } from 'react-router';
 import dateFormat from 'dateformat';
 import DiscussionsInput from './DiscussionsInput';
 import DiscussionsScore from './DiscussionsScore';
-import smoothScroll from '../../utils/smoothscroll';
 
 import {convertListToObject} from '../../utils/parsePlugins';
 import PPMComponent from '../../markdown/PPMComponent';
-// import marked from '../../markdown/markdown';
-// import markdownExtensions from '../../components/EditorPlugins';
-// marked.setExtensions(markdownExtensions);
 
 // import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
@@ -22,8 +18,8 @@ const DiscussionsItem = React.createClass({
 	propTypes: {
 		slug: PropTypes.string,
 		discussionItem: PropTypes.object,
-		pHashes: PropTypes.object,
 		instanceName: PropTypes.string,
+		isPubAuthor: PropTypes.bool,
 
 		addDiscussionHandler: PropTypes.func,
 		addDiscussionStatus: PropTypes.string,
@@ -32,6 +28,7 @@ const DiscussionsItem = React.createClass({
 
 		activeSaveID: PropTypes.string,
 		handleVoteSubmit: PropTypes.func,
+		handleArchive: PropTypes.func,
 
 		noPermalink: PropTypes.bool,
 		noReply: PropTypes.bool,
@@ -43,67 +40,20 @@ const DiscussionsItem = React.createClass({
 				selections: [],
 				children: [],
 			},
-			pHashes: {},
 		};
 	},
 
 	getInitialState() {
 		return {
 			replyActive: false,
+			showArchived: false,
 		};
-	},
-
-	componentDidMount() {
-
-		// Timeout is to let DOM elements draw first, so they exist since everything will initially 'mount' at the same time
-		setTimeout(()=>{
-			// Go through all the selections and add them to the body
-			const Marklib = require('marklib');
-			this.props.discussionItem.selections.map((selection)=>{
-				const pIndex = this.props.pHashes[selection.ancestorHash];
-
-				if (pIndex) {
-					try {
-						const result = {
-							startContainerPath: selection.startContainerPath.replace(/div:nth-of-type\([^\)]+\)/, 'div:nth-of-type(' + pIndex + ')'),
-							endContainerPath: selection.endContainerPath.replace(/div:nth-of-type\([^\)]+\)/, 'div:nth-of-type(' + pIndex + ')'),
-							startOffset: selection.startOffset,
-							endOffset: selection.endOffset,
-						};	
-						// console.log('reproduced result', result);
-						const renderer = new Marklib.Rendering(document, {className: 'selection selection-' + selection._id}, document.getElementById('pubBodyContent'));
-						renderer.renderWithResult(result);	
-						renderer.on('click', function(item) {
-							const destination = document.getElementById('selection-block-' + selection._id);
-							const context = document.getElementsByClassName('rightBar')[0];
-							smoothScroll(destination, 500, ()=>{}, context);
-						});
-						renderer.on('hover-enter', function(item) {
-							const destination = document.getElementById('selection-block-' + selection._id);
-							destination.className = destination.className.replace('selection-block', 'selection-block-active');
-						});
-						renderer.on('hover-leave', function(item) {
-							const destination = document.getElementById('selection-block-' + selection._id);
-							destination.className = destination.className.replace('selection-block-active', 'selection-block');
-						});
-					} catch (err) {
-						if (__DEVELOPMENT__) {
-							console.log('selection', err);	
-						}
-					}
-				}
-				
-			});
-		}, 10);
-		
 	},
 
 	componentWillReceiveProps(nextProps) {
 		if (this.props.addDiscussionStatus === 'loading' && this.props.activeSaveID === this.props.discussionItem._id && nextProps.addDiscussionStatus === 'loaded') {
 			this.setState({replyActive: false});
-
 		}
-		
 	},
 
 	toggleReplyActive: function() {
@@ -112,117 +62,151 @@ const DiscussionsItem = React.createClass({
 		});
 	},
 
+	archive: function() {
+		this.props.handleArchive(this.props.discussionItem._id);
+	},
+
+	toggleShowArchived: function() {
+		this.setState({
+			showArchived: !this.state.showArchived
+		});
+	},
+	
 	render: function() {
 
 		const discussionItem = this.props.discussionItem;
-		// console.log('discussionItem', discussionItem);
-		// const assets = discussionItem.assets || {};
-		// const references = discussionItem.references || {};
 
 		const assets = convertListToObject( discussionItem.assets );
 		const references = convertListToObject(discussionItem.references, true);
 		const selections = discussionItem.selections || [];
-		// const md = marked(discussionItem.markdown || '', {assets, references, selections});
-
+		const isArchived = discussionItem.archived;
+		
+		// console.log(discussionItem);
+		const discussionPoints = discussionItem.points ? discussionItem.points : 0; // This is to fix a NaN problem with newly published comments/discussions
+		
 		return (
-			<div style={styles.container}>
-				
-				<div style={styles.discussionHeader}>
-
-					<div style={styles.discussionAuthorImageWrapper}>
-						<Link to={'/user/' + discussionItem.author.username} style={globalStyles.link}>
-							<img style={styles.discussionAuthorImage} src={discussionItem.author.thumbnail} />
-						</Link>
-					</div>
-					<div style={styles.discussionDetailsLine}>
-						<Link to={'/user/' + discussionItem.author.username} style={globalStyles.link}><span key={'discussionItemAuthorLink' + discussionItem._id} style={styles.headerText}>{discussionItem.author.name}</span></Link> on {dateFormat(discussionItem.postDate, 'mm/dd/yy, h:MMTT')}
-					</div>
-
-					<div style={[styles.discussionDetailsLine, styles.discussionDetailsLineBottom]}>
-						<Link style={globalStyles.link} to={'/pub/' + this.props.slug + '/discussions/' + discussionItem._id}>
-						<span style={[styles.detailLineItem, this.props.noPermalink && {display: 'none'}]}>
-							<FormattedMessage
-								id="discussion.permalink"
-								defaultMessage="Permalink"/>
-						</span>
-						</Link>
-
-						<span style={[styles.detailLineItemSeparator, (this.props.noReply || this.props.noPermalink) && {display: 'none'}]}>|</span>
-						
-						<span style={[styles.detailLineItem, this.props.noReply && {display: 'none'}]} key={'replyButton-' + discussionItem._id} onClick={this.toggleReplyActive}>
-							<FormattedMessage
-								id="discussion.reply"
-								defaultMessage="Reply"/>
-						</span>
-					</div>
-
+			isArchived && !this.state.showArchived
+				? <div style={[styles.archivedContainer, globalStyles.ellipsis]} key={'archiveBlock-' + discussionItem._id} onClick={this.toggleShowArchived}>
+					Archived
+					<span style={{padding: '0px 20px'}}>Comment by {discussionItem.author.name}</span>
+					{(discussionPoints + 1) === 1 ? (discussionPoints + 1) + ' point' : (discussionPoints + 1) + ' points'}
 				</div>
+				: <div style={[styles.container, isArchived && styles.archived]}>
+					<div style={styles.discussionHeader}>
 
-				<div style={styles.discussionBody}>
-					<div style={styles.discussionVoting}>
-						{this.props.noPermalink
-							? null
-							: <DiscussionsScore 
+						<div style={styles.discussionAuthorImageWrapper}>
+							<Link to={'/user/' + discussionItem.author.username} style={globalStyles.link}>
+								<img style={styles.discussionAuthorImage} src={discussionItem.author.thumbnail} />
+							</Link>
+						</div>
+						<div style={styles.discussionDetailsLine}>
+							<Link to={'/user/' + discussionItem.author.username} style={globalStyles.link}><span key={'discussionItemAuthorLink' + discussionItem._id} style={styles.headerText}>{discussionItem.author.name}</span></Link> on {dateFormat(discussionItem.postDate, 'mm/dd/yy, h:MMTT')}
+						</div>
+
+						<div style={[styles.discussionDetailsLine, styles.discussionDetailsLineBottom]}>
+							<Link style={globalStyles.link} to={'/pub/' + this.props.slug + '/discussions/' + discussionItem._id}>
+							<span style={[styles.detailLineItem, this.props.noPermalink && {display: 'none'}]}>
+								<FormattedMessage
+									id="discussion.permalink"
+									defaultMessage="Permalink"/>
+							</span>
+							</Link>
+
+							<span style={[styles.detailLineItemSeparator, (this.props.noReply || this.props.noPermalink) && {display: 'none'}]}>|</span>
+
+							<span style={[styles.detailLineItem, this.props.noReply && {display: 'none'}]} key={'replyButton-' + discussionItem._id} onClick={this.toggleReplyActive}>
+								<FormattedMessage
+									id="discussion.reply"
+									defaultMessage="Reply"/>
+							</span>
+
+							{this.props.isPubAuthor
+								? <span>
+									<span style={[styles.detailLineItemSeparator, (this.props.noReply && this.props.noPermalink) && {display: 'none'}]}>|</span>
+									<span style={[styles.detailLineItem, this.props.noReply && {display: 'none'}]} key={'archiveButton-' + discussionItem._id} onClick={this.archive}>
+										{isArchived
+											? <FormattedMessage id="discussion.Unarchive" defaultMessage="Unarchive"/>
+											: <FormattedMessage id="discussion.Archive" defaultMessage="Archive"/>
+										}
+									</span>
+								</span>
+								: null
+							}
+							
+							{isArchived
+								? <span>
+									<span style={[styles.detailLineItemSeparator, (this.props.noReply && this.props.noPermalink && !this.props.isPubAuthor) && {display: 'none'}]}>|</span>
+									<span style={[styles.detailLineItem, this.props.noReply && {display: 'none'}]} key={'archiveShowButton-' + discussionItem._id} onClick={this.toggleShowArchived}>
+										<FormattedMessage id="discussion.Archived" defaultMessage="Collapse"/>
+									</span>
+								</span>
+								: null
+							}
+
+						</div>
+
+					</div>
+
+					<div style={styles.discussionBody}>
+						<div style={styles.discussionVoting}>
+							<DiscussionsScore
 								discussionID={discussionItem._id}
-								score={discussionItem.yays - discussionItem.nays}
+								score={discussionPoints}
 								userYay={discussionItem.userYay}
-								userNay={discussionItem.userNay} 
-								handleVoteSubmit={this.props.handleVoteSubmit} 
+								userNay={discussionItem.userNay}
+								handleVoteSubmit={this.props.handleVoteSubmit}
 								readOnly={this.props.noReply}/>
-						}
-						
+						</div>
+
+						<div style={styles.discussionContent}>
+
+							{/* md.tree */}
+							<PPMComponent assets={assets} references={references} selections={selections} markdown={discussionItem.markdown} />
+
+						</div>
 					</div>
 
-					<div style={styles.discussionContent}>
-
-						{/* md.tree */}
-						<PPMComponent assets={assets} references={references} selections={selections} markdown={discussionItem.markdown} />
-
-					</div>
-				</div>
-				
-				{this.props.noReply
-					? null
-					: <div style={[styles.replyWrapper, this.state.replyActive && styles.replyWrapperActive]}>
-						<DiscussionsInput 
-							addDiscussionHandler={this.props.addDiscussionHandler}
-							addDiscussionStatus={this.props.addDiscussionStatus} 
-							newDiscussionData={this.props.newDiscussionData} 
-							userThumbnail={this.props.userThumbnail}
-							codeMirrorID={this.props.instanceName + 'replyInput-' + discussionItem._id} 
-							parentID={discussionItem._id}
-							saveID={discussionItem._id}
-							activeSaveID={this.props.activeSaveID}
-							isReply={true}/>
-					</div>
-
-				}
-
-				{/* Children */}
-				<div style={styles.discussionChildrenWrapper}>
-					{
-						discussionItem.children.map((child)=>{
-							return (<ChildPubDiscussionItem 
-								key={child._id}
-								slug={this.props.slug}
-								pHashes={this.props.pHashes}
-								discussionItem={child}
-
-								activeSaveID={this.props.activeSaveID}
+					{this.props.noReply
+						? null
+						: <div style={[styles.replyWrapper, this.state.replyActive && styles.replyWrapperActive]}>
+							<DiscussionsInput
 								addDiscussionHandler={this.props.addDiscussionHandler}
-								addDiscussionStatus={this.props.addDiscussionStatus} 
-								newDiscussionData={this.props.newDiscussionData} 
-								userThumbnail={this.props.userThumbnail} 
-								handleVoteSubmit={this.props.handleVoteSubmit} 
-								noReply={this.props.noReply}
-								noPermalink={this.props.noPermalink}/>
-							);
-						})
-					}
-				</div>
-				
+								addDiscussionStatus={this.props.addDiscussionStatus}
+								newDiscussionData={this.props.newDiscussionData}
+								userThumbnail={this.props.userThumbnail}
+								codeMirrorID={this.props.instanceName + 'replyInput-' + discussionItem._id}
+								parentID={discussionItem._id}
+								saveID={discussionItem._id}
+								activeSaveID={this.props.activeSaveID}
+								isReply={true}/>
+						</div>
 
-			</div>
+					}
+
+					{/* Children */}
+					<div style={styles.discussionChildrenWrapper}>
+						{
+							discussionItem.children.map((child)=>{
+								return (<ChildPubDiscussionItem
+									key={child._id}
+									slug={this.props.slug}
+									discussionItem={child}
+
+									activeSaveID={this.props.activeSaveID}
+									addDiscussionHandler={this.props.addDiscussionHandler}
+									addDiscussionStatus={this.props.addDiscussionStatus}
+									newDiscussionData={this.props.newDiscussionData}
+									userThumbnail={this.props.userThumbnail}
+									handleVoteSubmit={this.props.handleVoteSubmit}
+									noReply={this.props.noReply}
+									noPermalink={this.props.noPermalink}/>
+								);
+							})
+						}
+					</div>
+
+
+				</div>
 		);
 	}
 });
@@ -234,8 +218,26 @@ styles = {
 	container: {
 		width: '100%',
 		// overflow: 'hidden',
-		margin: '10px 0px',
+		margin: '10px 0px 0px 0px',
 		backgroundColor: 'rgba(255,255,255,0.2)',
+	},
+	archived: {
+		opacity: 0.7,
+	},
+	archivedContainer: {
+		color: '#777',
+		width: 'calc(100% - 20px)',
+		// margin: '4px 0px',
+		height: '17px',
+		lineHeight: '17px',
+		padding: '0px 10px',
+		fontSize: '12px',
+		backgroundColor: 'rgba(255,255,255,0.2)',
+		borderBottom: '1px solid #ccc',
+		':hover': {
+			color: '#444',
+			cursor: 'pointer',
+		},
 	},
 	discussionHeader: {
 		height: 36,
@@ -280,7 +282,7 @@ styles = {
 			cursor: 'pointer',
 		}
 	},
-	discussionDetailsLineBottom: { 
+	discussionDetailsLineBottom: {
 		lineHeight: '18px',
 	},
 	discussionBody: {
@@ -305,12 +307,13 @@ styles = {
 		width: 'calc(100% - 36px - 30px)',
 		marginLeft: 36,
 		// overflow: 'hidden',
-		fontFamily: 'Arial',
 		color: '#555',
-		fontSize: '15px',
 		// padding: '0px 15px',
 		padding: '10px 6px',
-
+		lineHeight: '1.58',
+		fontSize: '0.9em',
+		fontWeight: '300',
+		fontFamily: 'Helvetica Neue,Helvetica,Arial,sans-serif',
 	},
 	discussionChildrenWrapper: {
 		width: 'calc(100% - 20px)',

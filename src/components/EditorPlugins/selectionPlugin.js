@@ -1,8 +1,9 @@
 import React, {PropTypes} from 'react';
 import createPubPubPlugin from './PubPub';
-
 import Radium, {Style} from 'radium';
 import smoothScroll from '../../utils/smoothscroll';
+
+import {FormattedMessage} from 'react-intl';
 
 const SelectionInputFields = [
 	{title: 'index', type: 'selection', params: {}},
@@ -15,6 +16,7 @@ const SelectionConfig = {
 };
 
 let styles;
+let Marklib;
 
 const SelectionPlugin = React.createClass({
 	propTypes: {
@@ -22,20 +24,76 @@ const SelectionPlugin = React.createClass({
 		children: PropTypes.string,
 		index: PropTypes.object,
 	},
+
+	componentDidMount() {
+		Marklib = require('marklib');
+
+		// Timeout is to let DOM elements draw first, so they exist since everything will initially 'mount' at the same time
+		setTimeout(()=>{
+			this.drawHighlight();
+		}, 10);
+	},
+
 	getInitialState: function() {
 		return {
 			showContext: false,
 		};
 	},
 
+	drawHighlight: function() {
+		const selection = this.props.index;
+		try {
+			const result = {
+				startContainerPath: selection.startContainerPath,
+				endContainerPath: selection.endContainerPath,
+				startOffset: selection.startOffset,
+				endOffset: selection.endOffset,
+			};	
+
+			const version = parseInt(selection.version, 10);
+			const classname = version ? 'selection' : 'selection selection-editor';
+			const renderer = new Marklib.Rendering(document, {className: classname + ' selection-' + selection._id}, document.getElementById('pubBodyContent'));
+			renderer.renderWithResult(result);	
+
+
+			renderer.on('click', function(item) {
+				const destination = document.getElementById('selection-block-' + selection._id);
+				const context = version ? document.getElementsByClassName('rightBar')[0] : document.getElementsByClassName('commentsRightBar')[0];
+				smoothScroll(destination, 500, ()=>{}, context, -25);
+			});
+			renderer.on('hover-enter', function(item) {
+				const destination = document.getElementById('selection-block-' + selection._id);
+				destination.className = destination.className.replace('selection-block', 'selection-block-active');
+			});
+			renderer.on('hover-leave', function(item) {
+				const destination = document.getElementById('selection-block-' + selection._id);
+				destination.className = destination.className.replace('selection-block-active', 'selection-block');
+			});
+
+		} catch (err) {
+			if (__DEVELOPMENT__) {
+				console.log('selection', err);	
+			}
+		}
+	},
+
 	scrollToHighlight: function() {
-		const destination = document.getElementsByClassName('selection-' + this.props.index._id)[0];
+		let destination = document.getElementsByClassName('selection-' + this.props.index._id)[0];
+
+		// If we're on the editor, and we can't find the selectoin, redraw.
+		if (parseInt(this.props.index.version, 10) === 0 && !destination) {
+			this.drawHighlight();
+			destination = document.getElementsByClassName('selection-' + this.props.index._id)[0];
+		}
+
 		if (!destination) {
 			this.setState({showContext: !this.state.showContext});
+		} else {
+			const context = document.getElementsByClassName('pubScrollContainer')[0];
+			smoothScroll(destination, 500, ()=>{}, context);
+			smoothScroll(destination, 500, ()=>{}, null, -60);
 		}
-		const context = document.getElementsByClassName('centerBar')[0];
-		smoothScroll(destination, 500, ()=>{}, context);
-		smoothScroll(destination, 500, ()=>{}, null, -60);
+		
 	},
 
 	hoverOn: function() {
@@ -88,6 +146,7 @@ const SelectionPlugin = React.createClass({
 		}
 		
 		const offsets = this.calculateOffsets();
+
 		return (
 			<div 
 				id={'selection-block-' + this.props.index._id}
@@ -113,7 +172,12 @@ const SelectionPlugin = React.createClass({
 					{/* <span style={styles.quotationMark}>“</span> */}
 					{this.state.showContext
 						? <div>
-							<div style={styles.versionHeader}>Selection made on Version {this.props.index.version}</div>
+							<div style={styles.versionHeader}>
+								{parseInt(this.props.index.version, 10) === 0
+									? <FormattedMessage id="discussion.selectionPreviousDraft" defaultMessage="Selection made on draft version"/>
+									: <FormattedMessage id="discussion.selectionPreviousVersion" defaultMessage="Selection made on Version {version}" values={{version: this.props.index.version}}/>
+								}
+							</div>
 							{offsets[0] === null
 								? this.props.index.context
 								: <span>

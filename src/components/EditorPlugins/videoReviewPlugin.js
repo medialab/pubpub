@@ -1,7 +1,7 @@
 import React, {PropTypes} from 'react';
 import createPubPubPlugin from './PubPub';
 import Timer from '../../utils/timer';
-import Portal from '../../utils/Portal';
+import Portal from '../../utils/portal';
 import hhmmss from 'hhmmss';
 
 

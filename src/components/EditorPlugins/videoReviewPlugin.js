@@ -1,6 +1,6 @@
 import React, {PropTypes} from 'react';
 import createPubPubPlugin from './PubPub';
-import Timer from '../../utils/Timer';
+import Timer from '../../utils/timer';
 import Portal from '../../utils/Portal';
 import hhmmss from 'hhmmss';
 

@@ -18,6 +18,8 @@ var discussionSchema = new Schema({
   sourceJournal: { type: ObjectId, ref: 'Journal' },
   postDate: { type: Date },
 
+  archived: { type: Boolean },
+
   yays: [ { type: ObjectId, ref: 'User' } ],
   nays: [ { type: ObjectId, ref: 'User' } ],
   
@@ -86,7 +88,6 @@ discussionSchema.statics.sortDiscussions = function (input) {
       });
       return _.sortBy(array, propertyName).reverse();
   };
-
   var sortedInput = _.sortRecursive(input, 'points');
   return sortedInput;
 }

@@ -2,7 +2,7 @@ export const scienceStyle = {
 	'#pub-title': {
 		textAlign: 'left',
 		fontSize: '2.6em',
-		margin: '0.7em 0px',
+		padding: '0.7em 0px',
 		fontWeight: '700',
 		lineHeight: '1.3em',
 		color: '#222',
@@ -70,6 +70,12 @@ export const scienceStyle = {
 		width: '88%',
 		overflowX: 'scroll',
 
+	},
+	'blockquote': {
+		padding: '10px 20px',
+		margin: '0 0 20px',
+		fontSize: '17.5px',
+		borderLeft: '5px solid #eee',
 	},
 	'ul, ol': {
 		fontFamily: 'Lora',

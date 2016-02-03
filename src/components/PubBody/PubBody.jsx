@@ -30,6 +30,7 @@ const PubBody = React.createClass({
 		addSelectionHandler: PropTypes.func,
 		style: PropTypes.object,
 		showPubHighlights: PropTypes.bool,
+		showPubHighlightsComments: PropTypes.bool,
 		isFeatured: PropTypes.bool,
 		errorView: PropTypes.bool,
 
@@ -41,7 +42,8 @@ const PubBody = React.createClass({
 
 		minFont: PropTypes.number,
 		firstPublishedDate: PropTypes.string,
-		lastPublishedDate: PropTypes.string
+		lastPublishedDate: PropTypes.string,
+
 	},
 	getDefaultProps: function() {
 		return {
@@ -123,8 +125,15 @@ const PubBody = React.createClass({
 				backgroundColor: this.props.showPubHighlights ? 'rgba(195, 245, 185, 0.6)' : 'rgba(195, 245, 185, 0.0)',
 				cursor: this.props.showPubHighlights ? 'pointer' : 'text',
 			},
+			'.selection-editor': {
+				backgroundColor: this.props.showPubHighlightsComments ? 'rgba(195, 185, 245, 0.6)' : 'rgba(195, 245, 185, 0.0)',
+				cursor: this.props.showPubHighlightsComments ? 'pointer' : 'text',
+			},
 			'.selection-active': {
 				backgroundColor: 'rgba(78, 164, 61, 0.6)',
+			},
+			'.selection-editor.selection-active': {
+				backgroundColor: 'rgba(78, 61, 164, 0.6)',
 			},
 		});
 	},
@@ -181,7 +190,11 @@ const PubBody = React.createClass({
 					<div id="pubBodyContent">
 						{/* For Highlights to work, no divs can be placed before htmlTree */}
 						{/* this.props.htmlTree */}
-						<PPMComponent assets={this.props.assetsObject} references={this.props.referencesObject} selections={this.props.selectionsArray} markdown={this.props.markdown} />
+						<PPMComponent 
+							assets={this.props.assetsObject} 
+							references={this.props.referencesObject} 
+							selections={this.props.selectionsArray} 
+							markdown={this.props.markdown} />
 
 						{this.props.addSelectionHandler
 							? <PubSelectionPopup addSelectionHandler={this.props.addSelectionHandler}/>

@@ -57,8 +57,9 @@ const VideoReviewPlugin = React.createClass({
 
 	fetchRecording: function() {
 		// this.restoreSelections(this.actions);
-		xhrGet(`http://videoreviews.herokuapp.com/fetch?video=${this.props.name}`, function(review) {
+		xhrGet(`https://videoreviews.herokuapp.com/fetch?video=${this.props.name}`, function(review) {
 			if (review && review.actions) {
+				console.log("Got review!");
 				this.setState({loaded: true, actions: review.actions, video: review.video, duration: review.duration});
 			} else {
 				this.setState({error: true});
@@ -69,11 +70,15 @@ const VideoReviewPlugin = React.createClass({
 
 
 	play: function() {
-		// debugger;
+		console.log(this.state.video);
 		this.restoreSelections(this.state.actions);
-		this.cameraPreview.play();
-		this.cameraPreview.videoEl.addEventListener('ended', this.finished, false);
-		this.cameraPreview.videoEl.addEventListener('pause', this.pause, false);
+		try {
+			this.refs.camera.play();
+			this.refs.camera.videoEl.addEventListener('ended', this.finished, false);
+			this.refs.camera.videoEl.addEventListener('pause', this.pause, false);
+		} catch(err) {
+			document.getElementById('camera-preview').play();
+		}
 
 		this.setState({playing: true});
 	},
@@ -84,13 +89,13 @@ const VideoReviewPlugin = React.createClass({
 
 	pause: function() {
 		// this.cameraPreview.pause();
-		this.cameraPreview.videoEl.addEventListener('play', this.resume, false);
+		this.refs.camera.videoEl.addEventListener('play', this.resume, false);
 
 		this.setState({paused: true});
 		this.pauseSelections();
 	},
 	resume: function() {
-		this.cameraPreview.videoEl.removeEventListener('play', this.resume, false);
+		this.refs.camera.videoEl.removeEventListener('play', this.resume, false);
 		this.setState({paused: false});
 		this.resumeSelections();
 	},
@@ -172,7 +177,7 @@ const VideoReviewPlugin = React.createClass({
 
 		let elem;
 		if (this.state.loaded) {
-			elem = (<span style={styles.button} onClick={this.play}>
+			elem = (<span style={styles.button} onClick={this.play.bind(this)}>
 				📹 {(this.state.duration) ? `- ${hhmmss(this.state.duration / 1000)}` : null }
 			</span>);
 		} else if (!this.state.error) {
@@ -193,12 +198,12 @@ const VideoReviewPlugin = React.createClass({
 							<Video
 								style={styles.preview}
 								id="camera-preview"
-								ref={(ref) => this.cameraPreview = ref}
+								ref="camera"
 								controls
 								preload
 								>
 								<h1 style={styles.videoHeader}>Video comment by Thariq</h1>
-								<source src={(this.state.video) ? 'http://videoreview.s3-website-us-west-2.amazonaws.com/' + this.state.video : null} type="video/webm" />
+								<source src={(this.state.video) ? 'https://videoreview.s3-website-us-west-2.amazonaws.com/' + this.state.video : null} type="video/webm" />
 								<Controls>
 									<Play />
 									<Time />

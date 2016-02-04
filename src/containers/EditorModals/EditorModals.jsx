@@ -42,12 +42,12 @@ const Editor = React.createClass({
 				selections: [],
 				settings: {},
 			},
-			
+
 		};
 	},
 
 	componentDidMount() {
-		FireBaseURL = (process.env.NODE_ENV === 'production' && location.hostname !== 'pubpub-dev.herokuapp.com') ? 'https://pubpub.firebaseio.com/' : 'https://pubpub-dev.firebaseio.com/';
+		FireBaseURL = (process.env.NODE_ENV === 'production' && location.hostname !== 'pubpub-dev.herokuapp.com' && location.hostname !== 'pubpub-experiments.herokuapp.com') ? 'https://pubpub.firebaseio.com/' : 'https://pubpub-dev.firebaseio.com/';
 
 		if (! this.props.editorData.get('error')) {
 
@@ -145,7 +145,7 @@ const Editor = React.createClass({
 
 
 	render: function() {
-				
+
 		const activeModal = this.props.editorData.get('activeModal');
 
 		return (
@@ -159,22 +159,22 @@ const Editor = React.createClass({
 						{(() => {
 							switch (activeModal) {
 							case 'Assets':
-								return (<EditorModalAssets 
-										slug={this.props.slug} 
-										assetData={this.state.firepadData.assets} 
-										addAsset={this.addAsset} 
+								return (<EditorModalAssets
+										slug={this.props.slug}
+										assetData={this.state.firepadData.assets}
+										addAsset={this.addAsset}
 										deleteAsset={this.deleteAsset}/>
 									);
 
 							case 'Collaborators':
-								return (<EditorModalCollaborators 
-										collaboratorData={this.state.firepadData.collaborators} 
+								return (<EditorModalCollaborators
+										collaboratorData={this.state.firepadData.collaborators}
 										updateCollaborators={this.saveUpdatedCollaborators}/>
 									);
 
 							case 'Publish':
-								return (<EditorModalPublish 
-										slug={this.props.slug} 
+								return (<EditorModalPublish
+										slug={this.props.slug}
 										handlePublish={this.props.publishVersionHandler}
 										currentJournal={this.props.journalData.getIn(['journalData', 'journalName'])}/>
 									);
@@ -221,7 +221,7 @@ export default connect( state => {
 	};
 })( Radium(Editor) );
 
-styles = {	
+styles = {
 	modalSplash: {
 		opacity: 0,
 		pointerEvents: 'none',

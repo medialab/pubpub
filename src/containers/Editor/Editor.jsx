@@ -85,7 +85,7 @@ const Editor = React.createClass({
 	},
 
 	componentDidMount() {
-		FireBaseURL = (process.env.NODE_ENV === 'production' && location.hostname !== 'pubpub-dev.herokuapp.com') ? 'https://pubpub.firebaseio.com/' : 'https://pubpub-dev.firebaseio.com/';
+		FireBaseURL = (process.env.NODE_ENV === 'production' && location.hostname !== 'pubpub-dev.herokuapp.com' && location.hostname !== 'pubpub-experiments.herokuapp.com') ? 'https://pubpub.firebaseio.com/' : 'https://pubpub-dev.firebaseio.com/';
 
 		if (! this.props.editorData.get('error')) {
 
@@ -150,7 +150,7 @@ const Editor = React.createClass({
 					document.getElementById('userlist'), username, this.props.loginData.getIn(['userData', 'name']), this.props.loginData.getIn(['userData', 'thumbnail']));
 
 				firepad.on('synced', (synced)=>{
-					
+
 					debounce('saveStatusSync', ()=> {
 						this.updateSaveStatus(synced);
 					}, 250)();
@@ -225,7 +225,7 @@ const Editor = React.createClass({
 		const authorsNote = authorsNoteMatch && authorsNoteMatch.length ? authorsNoteMatch[1].trim() : '';
 
 		// Generate TOC
-		const TOCs = generateTOC(fullMD);		
+		const TOCs = generateTOC(fullMD);
 
 		// Format assets and references
 		const assets = convertFirebaseToObject(this.state.firepadData.assets);
@@ -234,7 +234,7 @@ const Editor = React.createClass({
 
 		// Strip markdown of title, abstract, authorsNote
 		const markdown = fullMD.replace(/\[\[title:.*?\]\]/g, '').replace(/\[\[abstract:.*?\]\]/g, '').replace(/\[\[authorsNote:.*?\]\]/g, '').trim();
-		
+
 		// const compiledMarkdown = performance.now();
 
 		if (this.state.title !== title || this.state.abstract !== abstract) {
@@ -267,9 +267,9 @@ const Editor = React.createClass({
 
 	toggleReadMode: function() {
 		if (this.props.editorData.get('viewMode') === 'read') {
-			this.props.dispatch(setEditorViewMode('preview'));	
+			this.props.dispatch(setEditorViewMode('preview'));
 		} else {
-			this.props.dispatch(setEditorViewMode('read'));	
+			this.props.dispatch(setEditorViewMode('read'));
 		}
 	},
 
@@ -369,7 +369,7 @@ const Editor = React.createClass({
 			if (mode === this.state.previewPaneMode) {
 				this.setState({previewPaneMode: undefined});
 			} else {
-				this.setState({previewPaneMode: mode});	
+				this.setState({previewPaneMode: mode});
 			}
 		};
 	},
@@ -416,7 +416,7 @@ const Editor = React.createClass({
 				{this.props.editorData.get('error')
 					? <div style={styles.errorTitle}>{this.props.editorData.getIn(['pubEditData', 'title'])}</div>
 					: <div>
-						
+
 						{/*	Component for all modals and their backdrop. */}
 						<EditorModals publishVersionHandler={this.publishVersion} />
 
@@ -488,7 +488,7 @@ const Editor = React.createClass({
 										}
 									</div>
 								</div>
-								
+
 							</div>
 
 							<div className="editorBodyView pubScrollContainer" style={[styles.previewBlockWrapper, styles.previewBlockWrapperShow]}>
@@ -519,7 +519,7 @@ const Editor = React.createClass({
 										references={referencesList}
 										isFeatured={true} />
 								</div>
-								
+
 							</div>
 						</div>
 
@@ -546,7 +546,7 @@ const Editor = React.createClass({
 									? <Discussions editorCommentMode={true} inEditor={true} instanceName={'editorComments'}/>
 									: null
 								}
-								
+
 							</div>
 
 							<div className="rightBar" style={[styles.previewBlockWrapper, this.state.previewPaneMode === 'discussions' && styles.previewBlockWrapperShow]}>
@@ -557,7 +557,7 @@ const Editor = React.createClass({
 								<div style={styles.previewBlockText}>
 									<FormattedMessage id="editorDiscussionMessage" defaultMessage="This section shows the discussion from the public, published version of your pub."/>
 								</div>
-								
+
 								{this.state.firepadInitialized
 									? <Discussions editorCommentMode={false} inEditor={true} instanceName={'editorDiscussions'}/>
 									: null
@@ -631,7 +631,7 @@ styles = {
 		},
 	},
 	bodyNavItem: {
-		
+
 		float: 'right',
 		padding: '0px 10px',
 		height: globalStyles.headerHeight,
@@ -804,7 +804,7 @@ styles = {
 		zIndex: 50,
 		position: 'absolute',
 		display: 'block',
-		
+
 		width: '100%',
 		top: -10,
 		bottom: -10,
@@ -862,7 +862,7 @@ styles = {
 		editorDiscussions: {
 			transform: 'translateX(0px)',
 		},
-		
+
 	},
 	read: {
 		editorMarkdown: {

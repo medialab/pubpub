@@ -139,8 +139,11 @@ const VideoReviewPlugin = React.createClass({
 		const playMouse = function(mouse) {
 			try {
 				const pos = mouse.pos;
-				this.mouseElem.style.left = pos.x + 'px';
-				this.mouseElem.style.top = pos.y + 'px';
+				const leftOffset = document.getElementById('pubContent').getBoundingClientRect().left;
+				const topOffset = document.getElementById('pubContent').getBoundingClientRect().top;
+
+				this.mouseElem.style.left = (pos.x + leftOffset) + 'px';
+				this.mouseElem.style.top = (pos.y - document.querySelector('.centerBar').scrollTop) + 'px';
 			} catch (err) {
 				console.log(err);
 			}
@@ -170,7 +173,7 @@ const VideoReviewPlugin = React.createClass({
 		let elem;
 		if (this.state.loaded) {
 			elem = (<span style={styles.button} onClick={this.play}>
-				📹 {(this.state.duration) ? `- ${hhmmss(this.state.duration / 1000)}` : null } - {this.props.name}
+				📹 {(this.state.duration) ? `- ${hhmmss(this.state.duration / 1000)}` : null }
 			</span>);
 		} else if (!this.state.error) {
 			elem = <span style={styles.button}>Loading Video Comment</span>;
@@ -196,7 +199,6 @@ const VideoReviewPlugin = React.createClass({
 								>
 								<h1 style={styles.videoHeader}>Video comment by Thariq</h1>
 								<source src={(this.state.video) ? 'http://videoreview.s3-website-us-west-2.amazonaws.com/' + this.state.video : null} type="video/webm" />
-								<Overlay />
 								<Controls>
 									<Play />
 									<Time />

@@ -65,7 +65,7 @@ const VideoReviews = React.createClass({
 		const duration = new Date().getTime() - this.startRecordingDate;
 		const videoData = {actions: this.actions, duration: duration};
 
-		xhr('http://videoreviews.herokuapp.com/record', JSON.stringify(videoData), function(fileName) {
+		xhr('https://videoreviews.herokuapp.com/record', JSON.stringify(videoData), function(fileName) {
 			console.log(fileName);
 		});
 	},
@@ -233,7 +233,7 @@ const VideoReviews = React.createClass({
 
 		this.setState({uploading: true});
 
-		xhr('http://videoreviews.herokuapp.com/upload', JSON.stringify(files), function(_fileName) {
+		xhr('https://videoreviews.herokuapp.com/upload', JSON.stringify(files), function(_fileName) {
 
 			this.props.onSave(_fileName);
 			// console.log(_fileName);

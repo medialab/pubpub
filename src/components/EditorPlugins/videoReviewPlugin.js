@@ -203,7 +203,7 @@ const VideoReviewPlugin = React.createClass({
 								preload
 								>
 								<h1 style={styles.videoHeader}>Video comment by Thariq</h1>
-								<source src={(this.state.video) ? 'https://videoreview.s3-website-us-west-2.amazonaws.com/' + this.state.video : null} type="video/webm" />
+								<source src={(this.state.video) ? 'https://s3-us-west-2.amazonaws.com/videoreview/' + this.state.video : null} type="video/webm" />
 								<Controls>
 									<Play />
 									<Time />

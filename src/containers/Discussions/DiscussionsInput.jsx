@@ -79,10 +79,14 @@ const PubDiscussionsInput = React.createClass({
 	startVideoReview: function() {
 		this.setState({videoRecording: true});
 	},
-	receiveVideoReview: function(videoName) {
+	receiveVideoReview: function(videoName, duration) {
 		const cm = document.getElementById(this.props.codeMirrorID).childNodes[0].CodeMirror;
 		const spacing = cm.getValue().length ? ' ' : '';
-		cm.setValue(cm.getValue() + spacing + '[[videoreview: name=' + videoName + ']] ' );
+		let properVideoName = videoName;
+		if (videoName.indexOf('.webm') !== -1) {
+			properVideoName = videoName.substring(0, videoName.length - 5);
+		}
+		cm.setValue(cm.getValue() + spacing + `[[videoreview: name=${properVideoName}, duration=${duration}]]` );
 		this.setState({videoRecording: false});
 	},
 	submitDiscussion: function() {

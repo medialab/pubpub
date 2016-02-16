@@ -3,7 +3,7 @@ import createPubPubPlugin from './PubPub';
 import Timer from '../../utils/timer';
 import Portal from '../../utils/portal';
 import hhmmss from 'hhmmss';
-
+import DiscussionsInput from '../../containers/Discussions/DiscussionsInput';
 
 import { default as Video, Controls, Play, Mute, Time, Overlay } from 'react-html5video';
 
@@ -37,7 +37,8 @@ const VideoReviewPlugin = React.createClass({
 	propTypes: {
 		name: PropTypes.string,
 		children: PropTypes.string,
-		caption: PropTypes.string
+		caption: PropTypes.string,
+		duration: PropTypes.string,
 	},
 	getInitialState: function() {
 		return {loaded: false, playing: false, paused: false, timers: []};
@@ -52,35 +53,51 @@ const VideoReviewPlugin = React.createClass({
 		require('rangy/lib/rangy-selectionsaverestore.js');
 		this.Marklib = Marklib;
 		Rangy.init();
-		this.fetchRecording();
+		// this.fetchRecording
 	},
 
-	fetchRecording: function() {
+	fetchRecording: function(callback) {
 		// this.restoreSelections(this.actions);
+		console.log('fetching ' + this.props.name );
+		if (!this.props.duration || isNaN(this.props.duration)) {
+			this.setState({error: true});
+			return;
+		}
+
 		xhrGet(`https://videoreviews.herokuapp.com/fetch?video=${this.props.name}`, function(review) {
+			console.log(review);
+			debugger;
 			if (review && review.actions) {
-				console.log("Got review!");
-				this.setState({loaded: true, actions: review.actions, video: review.video, duration: review.duration});
+				console.log('fetchei2');
+				this.setState({loaded: true, actions: review.actions, video: review.video, duration: review.duration, uploading: review.uploading});
+				console.log('fetched!');
+				callback();
 			} else {
 				this.setState({error: true});
-
 			}
 		}.bind(this));
 	},
 
+	fetchAndPlay: function() {
+		const self = this;
+		this.fetchRecording(function() {
+			self.play();
+		});
+	},
 
 	play: function() {
-		console.log(this.state.video);
 		this.restoreSelections(this.state.actions);
-		try {
-			this.refs.camera.play();
-			this.refs.camera.videoEl.addEventListener('ended', this.finished, false);
-			this.refs.camera.videoEl.addEventListener('pause', this.pause, false);
-		} catch(err) {
-			document.getElementById('camera-preview').play();
+		if (!this.state.uploading) {
+			try {
+				this.refs.camera.play();
+				this.refs.camera.videoEl.addEventListener('ended', this.finished, false);
+				this.refs.camera.videoEl.addEventListener('pause', this.pause, false);
+			} catch (err) {
+				document.getElementById('camera-preview').play();
+			}
+			this.setState({playing: true});
 		}
 
-		this.setState({playing: true});
 	},
 
 	finished: function(event) {
@@ -176,12 +193,17 @@ const VideoReviewPlugin = React.createClass({
 	render: function() {
 
 		let elem;
-		if (this.state.loaded) {
-			elem = (<span style={styles.button} onClick={this.play.bind(this)}>
-				📹 {(this.state.duration) ? `- ${hhmmss(this.state.duration / 1000)}` : null }
-			</span>);
-		} else if (!this.state.error) {
-			elem = <span style={styles.button}>Loading Video Comment</span>;
+		if (!this.state.error) {
+			if (!this.state.uploading) {
+				elem = (<span style={styles.button} onClick={this.fetchAndPlay}>
+					📹 {(this.props.duration) ? `- ${hhmmss(this.props.duration / 1000)}` : null }
+				</span>);
+			} else {
+				elem = (<span style={styles.button}>
+					📹 {(this.props.duration) ? `- ${hhmmss(this.props.duration / 1000)} (currently uploading)` : null }
+				</span>);
+			}
+
 		} else {
 			elem = <span style={styles.button}>Error Loading Video Comment</span>;
 		}
@@ -189,12 +211,31 @@ const VideoReviewPlugin = React.createClass({
 		return (
 			<div>
 				{elem}
+				{(this.state.loaded && !this.state.uploading) ?
+					<div style={[styles.camera(this.state.playing)]}>
+					<Video
+					style={styles.preview}
+					id="camera-preview"
+					ref="camera"
+					controls
+					preload
+					>
+					<source src={(this.state.video && this.state.playing) ? 'https://s3-us-west-2.amazonaws.com/videoreview/' + this.state.video : null} type="video/webm" />
+					<Controls>
+						<Play />
+						<Time />
+						<Mute />
+					</Controls>
+				</Video>
+			</div>
+				: null
+				}
 				<Portal>
 					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}/>
 				</Portal>
-				<div style={styles.wrapper}>
-					{ (this.state.loaded) ?
-						<div style={styles.camera(this.state.playing)}>
+				<div>
+					{ /* (this.state.loaded) ?
+						<div style={[styles.camera(this.state.playing), styles.modal]}>
 							<Video
 								style={styles.preview}
 								id="camera-preview"
@@ -210,11 +251,13 @@ const VideoReviewPlugin = React.createClass({
 									<Mute />
 								</Controls>
 							</Video>
-							{/* <DiscussionsInput />*/}
+
+							<DiscussionsInput codeMirrorID={`videoReview${this.props.name}`}/>
+
 						</div>
-						:
+													:
 						null
-					}
+					*/ }
 				</div>
 			</div>
 		);
@@ -243,7 +286,7 @@ styles = {
 	},
 	preview: {
 		border: 'none',
-		width: '100%'
+		width: '30vw',
 	},
 	button: {
 		backgroundColor: 'white',
@@ -260,6 +303,15 @@ styles = {
 		display: 'block',
 		width: '100%',
 		height: '1.5em',
+	},
+	modal: {
+		height: '100vh',
+		width: '37vw',
+		position: 'fixed',
+		top: '30px',
+		right: '0px',
+		backgroundColor: 'whitesmoke',
+		zIndex: '1000',
 	},
 	mouse: {
 		position: 'absolute',

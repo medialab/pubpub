@@ -20,6 +20,13 @@ export default function Timer(callback, delay) {
 		return finished;
 	};
 
+	this.clear = function() {
+		if (!finished) {
+			finished = true;
+			window.clearTimeout(timerId);	
+		}
+	};
+
 	this.resume = function() {
 		if (!finished) {
 			start = new Date();

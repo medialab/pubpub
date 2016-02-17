@@ -3,8 +3,9 @@ import RecordRTC from '../../utils/RTCWrapper';
 import Radium from 'radium';
 import lodash from 'lodash';
 import Rwg from 'random-word-generator';
-import {globalStyles} from '../../utils/styleConstants';
+import {globalStyles, pubSizes} from '../../utils/styleConstants';
 import ActionPlayer from './actionPlayer';
+
 
 let styles = {};
 let Rangy = null;
@@ -301,6 +302,10 @@ const VideoReviews = React.createClass({
 
 	},
 
+	close: function() {
+		this.props.onSave(null);
+	},
+
 	render: function() {
 
 		let button;
@@ -330,6 +335,7 @@ const VideoReviews = React.createClass({
 		return (
 			<div style={styles.modal}>
 				<div>
+
 					<div style={styles.show(true)}>
 						<video id="camera-preview" ref={(ref) => this.cameraPreview = ref} muted style={styles.preview}></video>
 					</div>
@@ -343,9 +349,13 @@ const VideoReviews = React.createClass({
 						<li>Point out parts of a document which are hard to understand textually.</li>
 						<li>Review a document as you read it to provide instant feedback.</li>
 						<li>Add character by doing a personal walkthrough of your document.</li>
+						<li>Anything else you can think of! Email pubpub@media.mit.edu if you have suggestions or feedback.</li>
 
 						</ul>
 				</div>
+
+				<div key="back" style={[globalStyles.button]} onClick={this.close}>Back</div>
+
 
 				{(this.state.previewing) ? <ActionPlayer actions={this.actions}/> : null}
 			</div>
@@ -387,14 +397,45 @@ styles = {
 		display: 'block',
 		// height: '100vh',
 		// width: '37vw',
-		width: 'calc(100vw - 200px - 950px - 45px)',
+		// width: 'calc(100vw - 200px - 950px - 45px)',
 		height: '100vh',
 		position: 'fixed',
-		padding: '20px',
 		top: '30px',
 		right: '0px',
 		backgroundColor: 'whitesmoke',
 		zIndex: '1000',
+		width: 'calc(100% - 800px - 10px)',
+
+		'@media screen and (min-resolution: 3dppx), screen and (max-width: 767px)': {
+			display: 'none',
+		},
+		// Desktop Sizes
+		'@media screen and (min-width: 768px) and (max-width: 1023px)': {
+			padding: pubSizes.xSmallPadding,
+			width: 'calc(100% - ' + pubSizes.xSmallLeft + 'px - ' + pubSizes.xSmallPub + 'px - ' + (2 * pubSizes.xSmallPadding) + 'px - 5px)',
+			height: 'calc(100vh - ' + globalStyles.headerHeight + ' - ' + (2 * pubSizes.xSmallPadding) + 'px)',
+		},
+		'@media screen and (min-width: 1024px) and (max-width: 1300px)': {
+			padding: pubSizes.smallPadding,
+			width: 'calc(100% - ' + pubSizes.smallLeft + 'px - ' + pubSizes.smallPub + 'px - ' + (2 * pubSizes.smallPadding) + 'px - 5px)',
+			height: 'calc(100vh - ' + globalStyles.headerHeight + ' - ' + (2 * pubSizes.smallPadding) + 'px)',
+		},
+		'@media screen and (min-width: 1301px) and (max-width: 1600px)': {
+			padding: pubSizes.mediumPadding,
+			width: 'calc(100% - ' + pubSizes.mediumLeft + 'px - ' + pubSizes.mediumPub + 'px - ' + (2 * pubSizes.mediumPadding) + 'px - 5px)',
+			height: 'calc(100vh - ' + globalStyles.headerHeight + ' - ' + (2 * pubSizes.mediumPadding) + 'px)',
+		},
+		'@media screen and (min-width: 1600px) and (max-width: 2000px)': {
+			padding: pubSizes.largePadding,
+			width: 'calc(100% - ' + pubSizes.largeLeft + 'px - ' + pubSizes.largePub + 'px - ' + (2 * pubSizes.largePadding) + 'px - 5px)',
+			height: 'calc(100vh - ' + globalStyles.headerHeight + ' - ' + (2 * pubSizes.largePadding) + 'px)',
+		},
+		'@media screen and (min-width: 2000px)': {
+			padding: pubSizes.xLargePadding,
+			width: 'calc(100% - ' + pubSizes.xLargeLeft + 'px - ' + pubSizes.xLargePub + 'px - ' + (2 * pubSizes.xLargePadding) + 'px - 5px)',
+			height: 'calc(100vh - ' + globalStyles.headerHeight + ' - ' + (2 * pubSizes.xLargePadding) + 'px)',
+		},
+
 	},
 	wrapper: {
 		position: 'fixed',

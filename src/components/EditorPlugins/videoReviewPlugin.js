@@ -3,9 +3,8 @@ import createPubPubPlugin from './PubPub';
 import Timer from '../../utils/timer';
 import Portal from '../../utils/portal';
 import hhmmss from 'hhmmss';
-import DiscussionsInput from '../../containers/Discussions/DiscussionsInput';
 
-import { default as Video, Controls, Play, Mute, Time, Overlay } from 'react-html5video';
+import { default as Video, Controls, Play, Mute, Time } from 'react-html5video';
 
 
 let styles = {};
@@ -65,12 +64,8 @@ const VideoReviewPlugin = React.createClass({
 		}
 
 		xhrGet(`https://videoreviews.herokuapp.com/fetch?video=${this.props.name}`, function(review) {
-			console.log(review);
-			debugger;
 			if (review && review.actions) {
-				console.log('fetchei2');
 				this.setState({loaded: true, actions: review.actions, video: review.video, duration: review.duration, uploading: review.uploading});
-				console.log('fetched!');
 				callback();
 			} else {
 				this.setState({error: true});
@@ -83,6 +78,11 @@ const VideoReviewPlugin = React.createClass({
 		this.fetchRecording(function() {
 			self.play();
 		});
+	},
+
+	stopPlaying: function() {
+		this.setState({playing: false, paused: false});
+		this.clearSelections();
 	},
 
 	play: function() {
@@ -101,6 +101,7 @@ const VideoReviewPlugin = React.createClass({
 	},
 
 	finished: function(event) {
+		this.clearSelections();
 		this.setState({playing: false, paused: false});
 	},
 
@@ -123,6 +124,13 @@ const VideoReviewPlugin = React.createClass({
 		}
 	},
 
+	clearSelections: function() {
+		if (this.lastSelection) this.lastSelection.destroy();
+		for (const timer of this.state.timers) {
+			timer.clear();
+		}
+	},
+
 	resumeSelections: function() {
 		for (const timer of this.state.timers) {
 			timer.resume();
@@ -131,22 +139,22 @@ const VideoReviewPlugin = React.createClass({
 
 	restoreSelections: function(actions) {
 
-		let lastSelection = null;
+		this.lastSelection = null;
 
 		const playSelection = function(action) {
 			try {
 				const range = action.range;
-				if (lastSelection) {
-					lastSelection.destroy();
+				if (this.lastSelection) {
+					this.lastSelection.destroy();
 				}
 				// const rendering = new Marklib.Rendering(pubContent);
 
 				if (range !== '') {
 					const rendering = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
 					rendering.renderWithResult(range);
-					lastSelection = rendering;
+					this.lastSelection = rendering;
 				} else {
-					lastSelection = null;
+					this.lastSelection = null;
 				}
 			} catch (err) {
 				console.warn('Selection Playback error!');
@@ -162,7 +170,6 @@ const VideoReviewPlugin = React.createClass({
 			try {
 				const pos = mouse.pos;
 				const leftOffset = document.getElementById('pubContent').getBoundingClientRect().left;
-				const topOffset = document.getElementById('pubContent').getBoundingClientRect().top;
 
 				this.mouseElem.style.left = (pos.x + leftOffset) + 'px';
 				this.mouseElem.style.top = (pos.y - document.querySelector('.centerBar').scrollTop) + 'px';
@@ -194,7 +201,9 @@ const VideoReviewPlugin = React.createClass({
 
 		let elem;
 		if (!this.state.error) {
-			if (!this.state.uploading) {
+			if (this.state.playing) {
+				elem = (<span style={styles.button} onClick={this.stopPlaying.bind(this)}>📹 - Playing</span>);
+			} else if (!this.state.uploading) {
 				elem = (<span style={styles.button} onClick={this.fetchAndPlay}>
 					📹 {(this.props.duration) ? `- ${hhmmss(this.props.duration / 1000)}` : null }
 				</span>);
@@ -231,7 +240,10 @@ const VideoReviewPlugin = React.createClass({
 				: null
 				}
 				<Portal>
-					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}/>
+					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}>
+						<span style={styles.mouseTriangle}/>
+						<span style={styles.mouseTooltip}>Thariq</span>
+					</div>
 				</Portal>
 				<div>
 					{ /* (this.state.loaded) ?
@@ -267,7 +279,10 @@ const VideoReviewPlugin = React.createClass({
 
 styles = {
 	camera: function(recording) {
-		const cameraStyle = {};
+		const cameraStyle = {
+			marginTop: '25px',
+			marginBottom: '50px',
+		};
 		if (recording) {
 			cameraStyle.display = 'block';
 		} else {
@@ -286,7 +301,9 @@ styles = {
 	},
 	preview: {
 		border: 'none',
-		width: '30vw',
+		width: 'auto',
+		display: 'block',
+		margin: 'auto',
 	},
 	button: {
 		backgroundColor: 'white',
@@ -322,6 +339,30 @@ styles = {
 		zIndex: '1000000000',
 		backgroundImage: 'url("http://www.szczepanek.pl/icons.grass/v.0.1/img/standard/gui-pointer.gif")',
 	},
+	mouseTriangle: {
+		width: 0,
+		height: 0,
+		borderLeft: '5px solid transparent',
+		borderRight: '5px solid transparent',
+		borderTop: '5px solid rgba(187, 40, 40, 0.59)',
+		fontSize: 0,
+		lineHeight: 0,
+		position: 'absolute',
+		left: '6px',
+		top: '-5px',
+		zIndex: '1000000',
+	},
+	mouseTooltip: {
+		fontSize: '0.75em',
+		position: 'relative',
+		top: '-25px',
+		left: '6px',
+		backgroundColor: 'rgba(187, 40, 40, 0.59)',
+		color: 'white',
+		padding: '3px 5px',
+		borderRadius: '1px',
+		fontWeight: '300',
+	}
 };
 
 export default createPubPubPlugin(VideoReviewPlugin, VideoReviewsConfig, VideoReviewsInputFields);

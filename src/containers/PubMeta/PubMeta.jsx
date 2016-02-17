@@ -104,7 +104,7 @@ const PubMeta = React.createClass({
 		// const pubData = this.props.readerData.get('pubData').toJS();
 		const versionIndex = this.props.query.version !== undefined ? this.props.query.version - 1 : this.props.readerData.getIn(['pubData', 'history']).size - 1;
 		const versionURL = this.props.query.version !== undefined ? '?version=' + this.props.query.version : '';
-		
+
 		return (
 			<div style={styles.container}>
 
@@ -125,7 +125,7 @@ const PubMeta = React.createClass({
 							citationsCount={pubData.citations ? pubData.citations.length : 0}
 							newsCount={pubData.news ? pubData.news.length : 0} />
 					}
-					
+
 				</div>
 
 				<div className="centerBar" style={[styles.centerBar]}>
@@ -222,7 +222,7 @@ const PubMeta = React.createClass({
 								})()}
 							</div>
 						}
-						
+
 
 					</div>
 
@@ -400,7 +400,6 @@ styles = {
 
 	rightBar: {
 		padding: 5,
-		width: 'calc(100% - 800px - 10px)',
 		display: 'none',
 		height: 'calc(100vh - ' + globalStyles.headerHeight + ' - 10px)',
 		float: 'left',

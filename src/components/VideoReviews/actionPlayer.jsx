@@ -1,6 +1,7 @@
 import React, {PropTypes} from 'react';
 import Timer from '../../utils/timer';
 import Portal from '../../utils/portal';
+import Radium from 'radium';
 
 let styles = {};
 let Rangy = null;
@@ -9,9 +10,10 @@ let Marklib = null;
 const ActionPlayer = React.createClass({
 	propTypes: {
 		actions: PropTypes.array,
+		name: PropTypes.string,
 	},
 	getInitialState: function() {
-		return {playing: true, paused: false, timers: []};
+		return {playing: false, paused: false, timers: []};
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;
@@ -30,6 +32,11 @@ const ActionPlayer = React.createClass({
 	play: function() {
 		this.restoreSelections(this.props.actions);
 		this.setState({playing: true});
+	},
+
+	stop: function() {
+		this.clearSelections();
+		this.setState({playing: false});
 	},
 
 	finished: function(event) {
@@ -128,7 +135,10 @@ const ActionPlayer = React.createClass({
 		return (
 			<div>
 				<Portal>
-					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}/>
+					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}>
+						<span style={styles.mouseTriangle}/>
+						<span style={styles.mouseTooltip}>Thariq</span>
+					</div>
 				</Portal>
 			</div>
 		);
@@ -155,6 +165,30 @@ styles = {
 		zIndex: '1000000000',
 		backgroundImage: 'url("http://www.szczepanek.pl/icons.grass/v.0.1/img/standard/gui-pointer.gif")',
 	},
+	mouseTriangle: {
+		width: 0,
+		height: 0,
+		borderLeft: '5px solid transparent',
+		borderRight: '5px solid transparent',
+		borderTop: '5px solid rgba(187, 40, 40, 0.59)',
+		fontSize: 0,
+		lineHeight: 0,
+		position: 'absolute',
+		left: '6px',
+		top: '-5px',
+		zIndex: '1000000',
+	},
+	mouseTooltip: {
+		fontSize: '0.75em',
+		position: 'relative',
+		top: '-25px',
+		left: '6px',
+		backgroundColor: 'rgba(187, 40, 40, 0.59)',
+		color: 'white',
+		padding: '3px 5px',
+		borderRadius: '1px',
+		fontWeight: '300',
+	}
 };
 
-export default ActionPlayer;
+export default Radium(ActionPlayer);

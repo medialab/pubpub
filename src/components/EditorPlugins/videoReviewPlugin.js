@@ -1,8 +1,8 @@
 import React, {PropTypes} from 'react';
 import createPubPubPlugin from './PubPub';
-import Timer from '../../utils/timer';
 import Portal from '../../utils/portal';
 import hhmmss from 'hhmmss';
+import ActionPlayer from '../../components/VideoReviews/actionPlayer';
 
 import { default as Video, Controls, Play, Mute, Time } from 'react-html5video';
 
@@ -40,7 +40,7 @@ const VideoReviewPlugin = React.createClass({
 		duration: PropTypes.string,
 	},
 	getInitialState: function() {
-		return {loaded: false, playing: false, paused: false, timers: []};
+		return {loaded: false, playing: false, paused: false, actions: []};
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;
@@ -81,12 +81,12 @@ const VideoReviewPlugin = React.createClass({
 	},
 
 	stopPlaying: function() {
+		this.refs.actionPlayer.stop();
 		this.setState({playing: false, paused: false});
-		this.clearSelections();
 	},
 
 	play: function() {
-		this.restoreSelections(this.state.actions);
+		this.refs.actionPlayer.play();
 		if (!this.state.uploading) {
 			try {
 				this.refs.camera.play();
@@ -101,100 +101,20 @@ const VideoReviewPlugin = React.createClass({
 	},
 
 	finished: function(event) {
-		this.clearSelections();
+		this.refs.actionPlayer.stop();
 		this.setState({playing: false, paused: false});
 	},
 
 	pause: function() {
 		// this.cameraPreview.pause();
 		this.refs.camera.videoEl.addEventListener('play', this.resume, false);
-
 		this.setState({paused: true});
-		this.pauseSelections();
+		this.refs.actionPlayer.pause();
 	},
 	resume: function() {
 		this.refs.camera.videoEl.removeEventListener('play', this.resume, false);
 		this.setState({paused: false});
-		this.resumeSelections();
-	},
-
-	pauseSelections: function() {
-		for (const timer of this.state.timers) {
-			timer.pause();
-		}
-	},
-
-	clearSelections: function() {
-		if (this.lastSelection) this.lastSelection.destroy();
-		for (const timer of this.state.timers) {
-			timer.clear();
-		}
-	},
-
-	resumeSelections: function() {
-		for (const timer of this.state.timers) {
-			timer.resume();
-		}
-	},
-
-	restoreSelections: function(actions) {
-
-		this.lastSelection = null;
-
-		const playSelection = function(action) {
-			try {
-				const range = action.range;
-				if (this.lastSelection) {
-					this.lastSelection.destroy();
-				}
-				// const rendering = new Marklib.Rendering(pubContent);
-
-				if (range !== '') {
-					const rendering = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
-					rendering.renderWithResult(range);
-					this.lastSelection = rendering;
-				} else {
-					this.lastSelection = null;
-				}
-			} catch (err) {
-				console.warn('Selection Playback error!');
-			}
-		};
-
-		const playScroll = function(scroll) {
-			const pos = scroll.pos;
-			document.querySelector('.centerBar').scrollTop = pos;
-		};
-
-		const playMouse = function(mouse) {
-			try {
-				const pos = mouse.pos;
-				const leftOffset = document.getElementById('pubContent').getBoundingClientRect().left;
-
-				this.mouseElem.style.left = (pos.x + leftOffset) + 'px';
-				this.mouseElem.style.top = (pos.y - document.querySelector('.centerBar').scrollTop) + 'px';
-			} catch (err) {
-				console.log(err);
-			}
-		}.bind(this);
-
-		const timers = [];
-
-		for (const action of actions) {
-			if (action.type === 'select') {
-				timers.push(new Timer(playSelection.bind(this, action), action.time));
-				// setTimeout(playSelection.bind(this, action), action.time);
-			} else if (action.type === 'scroll') {
-				timers.push(new Timer(playScroll.bind(this, action), action.time));
-				// setTimeout(playScroll.bind(this, action), action.time);
-			} else if (action.type === 'mouse') {
-				timers.push(new Timer(playMouse.bind(this, action), action.time));
-				// setTimeout(playMouse.bind(this, action), action.time);
-			}
-		}
-
-		this.setState({timers: timers});
-
+		this.refs.actionPlayer.resume();
 	},
 
 	render: function() {
@@ -239,12 +159,9 @@ const VideoReviewPlugin = React.createClass({
 			</div>
 				: null
 				}
-				<Portal>
-					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}>
-						<span style={styles.mouseTriangle}/>
-						<span style={styles.mouseTooltip}>Thariq</span>
-					</div>
-				</Portal>
+
+				<ActionPlayer ref="actionPlayer" name="Thariq" actions={this.state.actions}/>
+
 				<div>
 					{ /* (this.state.loaded) ?
 						<div style={[styles.camera(this.state.playing), styles.modal]}>
@@ -320,48 +237,6 @@ styles = {
 		display: 'block',
 		width: '100%',
 		height: '1.5em',
-	},
-	modal: {
-		height: '100vh',
-		width: '37vw',
-		position: 'fixed',
-		top: '30px',
-		right: '0px',
-		backgroundColor: 'whitesmoke',
-		zIndex: '1000',
-	},
-	mouse: {
-		position: 'absolute',
-		top: '50px',
-		left: '50px',
-		width: '20px',
-		height: '20px',
-		zIndex: '1000000000',
-		backgroundImage: 'url("http://www.szczepanek.pl/icons.grass/v.0.1/img/standard/gui-pointer.gif")',
-	},
-	mouseTriangle: {
-		width: 0,
-		height: 0,
-		borderLeft: '5px solid transparent',
-		borderRight: '5px solid transparent',
-		borderTop: '5px solid rgba(187, 40, 40, 0.59)',
-		fontSize: 0,
-		lineHeight: 0,
-		position: 'absolute',
-		left: '6px',
-		top: '-5px',
-		zIndex: '1000000',
-	},
-	mouseTooltip: {
-		fontSize: '0.75em',
-		position: 'relative',
-		top: '-25px',
-		left: '6px',
-		backgroundColor: 'rgba(187, 40, 40, 0.59)',
-		color: 'white',
-		padding: '3px 5px',
-		borderRadius: '1px',
-		fontWeight: '300',
 	}
 };
 

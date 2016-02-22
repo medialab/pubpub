@@ -11,7 +11,7 @@ import {closeMenu} from '../../actions/nav';
 
 import {convertImmutableListToObject} from '../../utils/parsePlugins';
 
-import {PubBody, PubModals, PubNav, LoaderDeterminate, PubLeftBar, VideoReviews} from '../../components';
+import {PubBody, PubModals, PubNav, LoaderDeterminate, PubLeftBar} from '../../components';
 import {Discussions} from '../';
 
 import {globalStyles, pubSizes} from '../../utils/styleConstants';
@@ -186,7 +186,7 @@ const PubReader = React.createClass({
 			const srcRegex = /{{image:.*(source=([^\s,]*)).*}}/;
 			const match = srcRegex.exec(pubData.history[versionIndex].markdown);
 			const refName = match ? match[2] : undefined;
-			
+
 			let leadImage = '';
 			for (let index = pubData.history[versionIndex].assets.length; index--;) {
 				if (pubData.history[versionIndex].assets[index].refName === refName) {
@@ -197,7 +197,7 @@ const PubReader = React.createClass({
 
 			metaData.meta.push({property: 'og:image', content: leadImage});
 			metaData.meta.push({name: 'twitter:image', content: leadImage});
-			
+
 		} else {
 			metaData.title = 'PubPub - ' + this.props.slug;
 		}

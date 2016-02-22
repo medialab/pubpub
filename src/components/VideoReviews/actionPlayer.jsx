@@ -11,9 +11,10 @@ const ActionPlayer = React.createClass({
 	propTypes: {
 		actions: PropTypes.array,
 		name: PropTypes.string,
+		autoPlay: PropTypes.bool
 	},
 	getInitialState: function() {
-		return {playing: false, paused: false, timers: []};
+		return {playing: this.props.autoPlay || false, paused: false, timers: []};
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;

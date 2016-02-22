@@ -1,6 +1,5 @@
 import React, {PropTypes} from 'react';
 import createPubPubPlugin from './PubPub';
-import Portal from '../../utils/portal';
 import hhmmss from 'hhmmss';
 import ActionPlayer from '../../components/VideoReviews/actionPlayer';
 

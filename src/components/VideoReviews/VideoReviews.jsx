@@ -5,12 +5,10 @@ import lodash from 'lodash';
 import Rwg from 'random-word-generator';
 import {globalStyles, pubSizes} from '../../utils/styleConstants';
 import ActionPlayer from './actionPlayer';
+import ActionRecorder from './actionRecorder';
 
 
 let styles = {};
-let Rangy = null;
-let Marklib = null;
-
 function xhr(url, data, callback) {
 	const request = new XMLHttpRequest();
 	request.onreadystatechange = function() {
@@ -31,8 +29,6 @@ const VideoReviews = React.createClass({
 		this.recordVideo = null;
 		this.videoDataURL = null;
 		this.audioDataURL = null;
-		this.actions = null;
-		this.selected = lodash.debounce(this._selected, 25);
 
 		return {
 			recording: false,
@@ -44,100 +40,10 @@ const VideoReviews = React.createClass({
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;
-
-		Marklib = require('marklib');
-		Rangy = require('rangy');
-		require('rangy/lib/rangy-textrange.js');
-		require('rangy/lib/rangy-serializer.js');
-		require('rangy/lib/rangy-selectionsaverestore.js');
-		window.rangy = Rangy;
-		window.Marklib = Marklib;
-		this.Marklib = Marklib;
-		Rangy.init();
 		//	const renderer = new Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
 		//	const result = renderer.renderWithRange(this.state.range);
 	},
 
-	startActionRecording: function() {
-		document.addEventListener('selectionchange', this.selected);
-		document.querySelector('.centerBar').addEventListener('scroll', this.scroll);
-		document.getElementById('pubContent').addEventListener('mousemove', this.mouse);
-		this.startRecordingDate = new Date().getTime();
-		this.actions = [];
-		this.scroll();
-	},
-	stopActionRecording: function() {
-		document.removeEventListener('selectionchange', this.selected);
-		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
-		document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
-
-		const duration = new Date().getTime() - this.startRecordingDate;
-		const videoData = {actions: this.actions, duration: duration};
-
-		xhr('https://videoreviews.herokuapp.com/record', JSON.stringify(videoData), function(fileName) {
-			console.log(fileName);
-		});
-	},
-
-	mouse: function(evt) {
-		const mouse = {};
-		const leftOffset = document.getElementById('pubContent').getBoundingClientRect().left;
-		const topOffset = document.getElementById('pubContent').getBoundingClientRect().top;
-
-		mouse.pos = {x: evt.pageX - leftOffset, y: evt.pageY + document.getElementById('pubContent').scrollTop - topOffset + 60};
-		mouse.type = 'mouse';
-
-		mouse.time = new Date().getTime() - this.startRecordingDate;
-		this.actions.push(mouse);
-	},
-
-	scroll: function(evt) {
-		const scroll = {};
-		scroll.pos = document.querySelector('.centerBar').scrollTop;
-		scroll.type = 'scroll';
-		scroll.time = new Date().getTime() - this.startRecordingDate;
-		this.actions.push(scroll);
-	},
-
-	_selected: function(evt) {
-		const selectionStr = window.getSelection().toString().trim();
-
-		if (selectionStr !== this.lastStr) {
-
-			const selection = document.getSelection();
-			let serializedRange;
-
-			if (selectionStr !== '') {
-				const mark = new this.Marklib.Rendering(document, {className: 'tempHighlight'}, document.getElementById('pubBodyContent'));
-				const range = mark.renderWithRange(selection.getRangeAt(0));
-				serializedRange = range.serialize();
-				mark.destroy();
-			} else {
-				serializedRange = '';
-			}
-
-			const action = {
-				type: 'select',
-				time: new Date().getTime() - this.startRecordingDate
-			};
-
-			action.range = serializedRange;
-			this.actions.push(action);
-			this.lastStr = selectionStr;
-
-			// const serializeSel = Rangy.serializeSelection(rawSel);
-			// console.log(serializeSel);
-
-			/*
-			const rawSel = Rangy.saveSelection();
-			const sel = JSON.parse(JSON.stringify(rawSel));
-			sel.time = new Date().getTime() - this.startRecordingDate;
-			sel.type = 'select';
-			this.actions.push(sel);
-			this.lastStr = window.getSelection().toString();
-			*/
-		}
-	},
 
 	startRecording: function() {
 
@@ -145,19 +51,15 @@ const VideoReviews = React.createClass({
 
 		this.setState({requesting: true});
 
+		this.startRecordingDate = new Date().getTime();
+
 		navigator.getUserMedia({
 			audio: true,
 			video: true
 		}, function(stream) {
 
+			this.actionRecorder.play();
 			self.setState({requesting: false, recording: true});
-
-			document.addEventListener('selectionchange', self.selected);
-			document.querySelector('.centerBar').addEventListener('scroll', self.scroll);
-			document.getElementById('pubContent').addEventListener('mousemove', self.mouse);
-			self.startRecordingDate = new Date().getTime();
-			self.actions = [];
-			self.scroll();
 
 			this.cameraPreview.src = window.URL.createObjectURL(stream);
 			this.cameraPreview.play();
@@ -182,15 +84,11 @@ const VideoReviews = React.createClass({
 			console.log(JSON.stringify(error));
 		});
 
-		this.forceUpdate();
 	},
 
 	componentWillUnmount: function() {
 		if (this.state.recording === true) {
 			navigator.getUserMedia({audio: false, video: false}, null);
-			document.removeEventListener('selectionchange', this.selected);
-			document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
-			document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
 			this.recordVideo.stopRecording();
 		}
 	},
@@ -200,14 +98,11 @@ const VideoReviews = React.createClass({
 		// this.cameraPreview.stop();
 		this.cameraPreview.src = null;
 		this.setState({recording: false, saving: true});
-
 		this.duration = new Date().getTime() - this.startRecordingDate;
+		this.actionRecorder.stop();
+		const actions = this.actionRecorder.getActions();
 
 		const self = this;
-
-		document.removeEventListener('selectionchange', this.selected);
-		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
-		document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
 
 		const onStopRecording = function() {
 			this.recordAudio.getDataURL(function(audioDataURL) {
@@ -219,7 +114,7 @@ const VideoReviews = React.createClass({
 						// navigator.getUserMedia({audio: false, video: false}, null);
 					});
 				} else {
-					this.postFiles(audioDataURL, null, this.actions);
+					this.postFiles(audioDataURL, null, actions);
 				}
 			}.bind(this));
 		}.bind(this);
@@ -252,14 +147,15 @@ const VideoReviews = React.createClass({
 	},
 
 	uploadRecording: function() {
-		this.postFiles(this.audioDataURL, this.videoDataURL, this.actions);
+		const actions = this.actionRecorder.getActions();
+		this.postFiles(this.audioDataURL, this.videoDataURL, actions);
 		this.setState({uploading: true});
 	},
 
 	retryRecording: function() {
 		this.videoDataURL = null;
 		this.audioDataURL = null;
-		this.actions = [];
+		this.actionRecorder.play();
 		this.setState({recorded: false});
 		this.startRecording();
 	},
@@ -354,10 +250,12 @@ const VideoReviews = React.createClass({
 						</ul>
 				</div>
 
+				<ActionRecorder ref={(ref) => this.actionRecorder = ref} />
+
 				<div key="back" style={[globalStyles.button]} onClick={this.close}>Back</div>
 
 
-				{(this.state.previewing) ? <ActionPlayer actions={this.actions}/> : null}
+				{(this.state.previewing) ? <ActionPlayer autoPlay={true} actions={this.actionRecorder.getActions()}/> : null}
 			</div>
 		);
 	}

@@ -1,11 +1,11 @@
 import React, {PropTypes} from 'react';
 import RecordRTC from '../../utils/RTCWrapper';
 import Radium from 'radium';
-import lodash from 'lodash';
 import Rwg from 'random-word-generator';
 import {globalStyles, pubSizes} from '../../utils/styleConstants';
 import ActionPlayer from './actionPlayer';
 import ActionRecorder from './actionRecorder';
+import {connect} from 'react-redux';
 
 
 let styles = {};
@@ -22,7 +22,9 @@ function xhr(url, data, callback) {
 
 const VideoReviews = React.createClass({
 	propTypes: {
-		onSave: PropTypes.func
+		onSave: PropTypes.func,
+		pubData: PropTypes.object,
+		loginData: PropTypes.object,
 	},
 	getInitialState: function() {
 		this.recordAudio = null;
@@ -163,6 +165,9 @@ const VideoReviews = React.createClass({
 
 	postFiles: function(audioDataURL, videoDataURL, actions) {
 
+		const displayName = this.props.loginData.getIn(['userData', 'name']);
+		const pubId = this.props.pubData.getIn(['pubData', '_id']);
+
 		const fileName = new Rwg().generate();
 		const files = { };
 		const duration = this.duration;
@@ -175,12 +180,14 @@ const VideoReviews = React.createClass({
 
 		files.actions = actions;
 		files.duration = duration;
+		files.displayName = displayName;
+		files.pubId = pubId;
 
 		if (!this.isFirefox) {
 			files.video = {
 				name: fileName + '.webm',
 				type: 'video/webm',
-				contents: videoDataURL
+				contents: videoDataURL,
 			};
 		}
 
@@ -354,4 +361,10 @@ styles = {
 	},
 };
 
-export default Radium(VideoReviews);
+
+export default connect( state => {
+	return {
+		pubData: state.pub,
+		loginData: state.login,
+	};
+})( Radium(VideoReviews) );

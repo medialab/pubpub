@@ -32,7 +32,7 @@ const PubDiscussionsInput = React.createClass({
 		activeSaveID: PropTypes.string,
 		saveID: PropTypes.string,
 		intl: PropTypes.object,
-
+		userName: PropTypes.string,
 	},
 
 	componentDidMount() {

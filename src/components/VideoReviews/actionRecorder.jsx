@@ -42,14 +42,31 @@ const VideoReviews = React.createClass({
 
 	mouse: function(evt) {
 		const mouse = {};
-		const leftOffset = document.getElementById('pubContent').getBoundingClientRect().left;
-		const topOffset = document.getElementById('pubContent').getBoundingClientRect().top;
 
-		mouse.pos = {x: evt.pageX - leftOffset, y: evt.pageY + document.getElementById('pubContent').scrollTop - topOffset + 60};
+		const boundingRect = document.getElementById('pubContent').getBoundingClientRect();
+
+		const leftOffset = boundingRect.left;
+		const topOffset = boundingRect.top;
+
+		const docWidth = boundingRect.width;
+		const docHeight = boundingRect.height;
+
+		const percentX = (evt.pageX - leftOffset) / docWidth;
+		const percentY = (evt.pageY - topOffset) / docHeight;
+
+		// console.log('Got scrolling!', percentX, percentY);
+
+		mouse.pos = {x: percentX, y: percentY};
 		mouse.type = 'mouse';
 
-		this.mouseElem.style.left = (evt.pageX ) + 'px';
-		this.mouseElem.style.top = (evt.pageY) + 'px';
+		const mouseX = (percentX * docWidth) + leftOffset;
+		const mouseY = (percentY * docHeight) + topOffset;
+
+		this.mouseElem.style.left = (mouseX ) + 'px';
+		this.mouseElem.style.top = (mouseY) + 'px';
+
+		// this.mouseElem.style.left = (evt.pageX ) + 'px';
+		// this.mouseElem.style.top = (evt.pageY) + 'px';
 
 		mouse.time = new Date().getTime() - this.startRecordingDate;
 		this.actions.push(mouse);
@@ -176,6 +193,7 @@ styles = {
 		left: '50px',
 		height: '20px',
 		zIndex: '1000000000',
+		pointerEvents: 'none'
 	},
 	mouseTriangle: {
 		width: 0,

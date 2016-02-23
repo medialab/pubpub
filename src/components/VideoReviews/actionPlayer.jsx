@@ -2,6 +2,7 @@ import React, {PropTypes} from 'react';
 import Timer from '../../utils/timer';
 import Portal from '../../utils/portal';
 import Radium from 'radium';
+import TimerText from './timerText';
 
 let styles = {};
 let Rangy = null;
@@ -14,7 +15,7 @@ const ActionPlayer = React.createClass({
 		autoPlay: PropTypes.bool
 	},
 	getInitialState: function() {
-		return {playing: this.props.autoPlay || false, paused: false, timers: []};
+		return {playing: this.props.autoPlay || false, paused: false, timers: [], seconds: 0};
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;
@@ -33,11 +34,13 @@ const ActionPlayer = React.createClass({
 	play: function() {
 		this.restoreSelections(this.props.actions);
 		this.setState({playing: true});
+		this.refs.durationTimer.play();
 	},
 
 	stop: function() {
 		this.clearSelections();
 		this.setState({playing: false});
+		this.refs.durationTimer.stop();
 	},
 
 	finished: function(event) {
@@ -48,10 +51,12 @@ const ActionPlayer = React.createClass({
 		// this.cameraPreview.pause();
 		this.setState({paused: true});
 		this.pauseSelections();
+		this.refs.durationTimer.pause();
 	},
 	resume: function() {
 		this.setState({paused: false});
 		this.resumeSelections();
+		this.refs.durationTimer.resume();
 	},
 
 	pauseSelections: function() {
@@ -104,10 +109,25 @@ const ActionPlayer = React.createClass({
 		const playMouse = function(mouse) {
 			try {
 				const pos = mouse.pos;
-				const leftOffset = document.getElementById('pubContent').getBoundingClientRect().left;
+				const boundingRect = document.getElementById('pubContent').getBoundingClientRect();
+				const leftOffset = boundingRect.left;
 
-				this.mouseElem.style.left = (pos.x + leftOffset) + 'px';
-				this.mouseElem.style.top = (pos.y - document.querySelector('.centerBar').scrollTop) + 'px';
+				let mouseX;
+				let mouseY;
+
+				if (pos.x < 1) {
+					const docWidth = boundingRect.width;
+					const docHeight = boundingRect.height;
+					const topOffset = boundingRect.top;
+					mouseX = (pos.x * docWidth) + leftOffset;
+					mouseY = (pos.y * docHeight) + topOffset;
+				} else {
+					mouseX = pos.x + leftOffset;
+					mouseY = pos.y - document.querySelector('.centerBar').scrollTop;
+				}
+
+				this.mouseElem.style.left = (mouseX) + 'px';
+				this.mouseElem.style.top = (mouseY) + 'px';
 			} catch (err) {
 				console.log(err);
 			}
@@ -137,8 +157,9 @@ const ActionPlayer = React.createClass({
 			<div>
 				<Portal>
 					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}>
+						<span style={styles.mousePointer}/>
 						<span style={styles.mouseTriangle}/>
-						<span style={styles.mouseTooltip}>Thariq</span>
+						<span style={styles.mouseTooltip}>{this.props.name} - <TimerText ref="durationTimer"/></span>
 					</div>
 				</Portal>
 			</div>
@@ -161,9 +182,15 @@ styles = {
 		position: 'absolute',
 		top: '50px',
 		left: '50px',
-		width: '20px',
-		height: '20px',
 		zIndex: '1000000000',
+		pointerEvents: 'none',
+	},
+	mousePointer: {
+		width: '20px',
+		height: '22px',
+		display: 'block',
+		position: 'relative',
+		top: '26px',
 		backgroundImage: 'url("http://www.szczepanek.pl/icons.grass/v.0.1/img/standard/gui-pointer.gif")',
 	},
 	mouseTriangle: {
@@ -174,9 +201,9 @@ styles = {
 		borderTop: '5px solid rgba(187, 40, 40, 0.59)',
 		fontSize: 0,
 		lineHeight: 0,
-		position: 'absolute',
+		position: 'relative',
 		left: '6px',
-		top: '-5px',
+		display: 'block',
 		zIndex: '1000000',
 	},
 	mouseTooltip: {

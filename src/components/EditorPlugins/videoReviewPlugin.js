@@ -63,8 +63,9 @@ const VideoReviewPlugin = React.createClass({
 		}
 
 		xhrGet(`https://videoreviews.herokuapp.com/fetch?video=${this.props.name}`, function(review) {
+			console.log(review);
 			if (review && review.actions) {
-				this.setState({loaded: true, actions: review.actions, video: review.video, duration: review.duration, uploading: review.uploading});
+				this.setState({loaded: true, actions: review.actions, video: review.video, duration: review.duration, uploading: review.uploading, displayName: review.displayName});
 				callback();
 			} else {
 				this.setState({error: true});
@@ -159,7 +160,7 @@ const VideoReviewPlugin = React.createClass({
 				: null
 				}
 
-				<ActionPlayer ref="actionPlayer" name="Thariq" actions={this.state.actions}/>
+				<ActionPlayer ref="actionPlayer" name={this.state.displayName} actions={this.state.actions}/>
 
 				<div>
 					{ /* (this.state.loaded) ?

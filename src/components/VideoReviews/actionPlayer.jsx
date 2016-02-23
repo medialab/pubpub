@@ -15,7 +15,14 @@ const ActionPlayer = React.createClass({
 		autoPlay: PropTypes.bool
 	},
 	getInitialState: function() {
-		return {playing: this.props.autoPlay || false, paused: false, timers: [], seconds: 0};
+		return {
+			playing: this.props.autoPlay || false,
+			paused: false,
+			timers: [],
+			mouseX: 0,
+			mouseY: 0,
+			clamped: null,
+		};
 	},
 	componentDidMount: function() {
 		this.isFirefox = !!navigator.mozGetUserMedia;
@@ -27,6 +34,7 @@ const ActionPlayer = React.createClass({
 		this.Marklib = Marklib;
 		Rangy.init();
 		this.restoreSelections(this.props.actions);
+		this.lastMouseEvent = null;
 	},
 	componentWillUnmount: function() {
 		this.clearSelections();
@@ -35,12 +43,18 @@ const ActionPlayer = React.createClass({
 		this.restoreSelections(this.props.actions);
 		this.setState({playing: true});
 		this.refs.durationTimer.play();
+		document.querySelector('.centerBar').addEventListener('scroll', this.scroll);
 	},
 
 	stop: function() {
 		this.clearSelections();
 		this.setState({playing: false});
 		this.refs.durationTimer.stop();
+		document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
+	},
+
+	scroll: function(event) {
+		if (this.lastMouseEvent) this.playMouse(this.lastMouseEvent);
 	},
 
 	finished: function(event) {
@@ -77,6 +91,47 @@ const ActionPlayer = React.createClass({
 		}
 	},
 
+	playMouse: function(mouse) {
+		this.lastMouseEvent = mouse;
+		const pos = mouse.pos;
+		const boundingRect = document.getElementById('pubContent').getBoundingClientRect();
+		const leftOffset = boundingRect.left;
+
+		let mouseX;
+		let mouseY;
+
+		if (pos.x < 1) {
+			const docWidth = boundingRect.width;
+			const docHeight = boundingRect.height;
+			const topOffset = boundingRect.top;
+			mouseX = (pos.x * docWidth) + leftOffset;
+			mouseY = (pos.y * docHeight) + topOffset;
+		} else {
+			mouseX = pos.x + leftOffset;
+			mouseY = pos.y - document.querySelector('.centerBar').scrollTop;
+		}
+
+		const clientHeight = document.documentElement.clientHeight;
+
+		let clamped = true;
+
+		if (mouseY > clientHeight - 25) {
+			mouseY = clientHeight;
+			clamped = 'bottom';
+		} else if (mouseY < 30) {
+			mouseY = 47;
+			clamped = 'top';
+			console.log('Clamped !', mouseY);
+		} else {
+			clamped = null;
+		}
+
+		this.setState({mouseX: mouseX, mouseY: mouseY, clamped: clamped});
+
+		// this.mouseElem.style.left = (mouseX) + 'px';
+		// this.mouseElem.style.top = (mouseY) + 'px';
+	},
+
 	restoreSelections: function(actions) {
 
 		let lastSelection = null;
@@ -106,32 +161,6 @@ const ActionPlayer = React.createClass({
 			document.querySelector('.centerBar').scrollTop = pos;
 		};
 
-		const playMouse = function(mouse) {
-			try {
-				const pos = mouse.pos;
-				const boundingRect = document.getElementById('pubContent').getBoundingClientRect();
-				const leftOffset = boundingRect.left;
-
-				let mouseX;
-				let mouseY;
-
-				if (pos.x < 1) {
-					const docWidth = boundingRect.width;
-					const docHeight = boundingRect.height;
-					const topOffset = boundingRect.top;
-					mouseX = (pos.x * docWidth) + leftOffset;
-					mouseY = (pos.y * docHeight) + topOffset;
-				} else {
-					mouseX = pos.x + leftOffset;
-					mouseY = pos.y - document.querySelector('.centerBar').scrollTop;
-				}
-
-				this.mouseElem.style.left = (mouseX) + 'px';
-				this.mouseElem.style.top = (mouseY) + 'px';
-			} catch (err) {
-				console.log(err);
-			}
-		}.bind(this);
 
 		const timers = [];
 
@@ -143,7 +172,9 @@ const ActionPlayer = React.createClass({
 				timers.push(new Timer(playScroll.bind(this, action), action.time));
 				// setTimeout(playScroll.bind(this, action), action.time);
 			} else if (action.type === 'mouse') {
-				timers.push(new Timer(playMouse.bind(this, action), action.time));
+				timers.push(new Timer(function(mouse) {
+					this.playMouse(mouse);
+				}.bind(this, action), action.time));
 				// setTimeout(playMouse.bind(this, action), action.time);
 			}
 		}
@@ -155,11 +186,11 @@ const ActionPlayer = React.createClass({
 	render: function() {
 		return (
 			<div>
-				<Portal>
-					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.camera(this.state.playing)]}>
-						<span style={styles.mousePointer}/>
-						<span style={styles.mouseTriangle}/>
-						<span style={styles.mouseTooltip}>{this.props.name} - <TimerText ref="durationTimer"/></span>
+				<Portal portalId="actionPlayerPointer">
+					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse(this.state.mouseX, this.state.mouseY), styles.show(this.state.playing)]}>
+						<span style={[styles.mousePointer, styles.show(!this.state.clamped)]}/>
+						<span style={styles.mouseTriangle(this.state.clamped)}/>
+						<span style={styles.mouseTooltip(this.state.clamped)}>{this.props.name} - <TimerText ref="durationTimer"/></span>
 					</div>
 				</Portal>
 			</div>
@@ -169,21 +200,19 @@ const ActionPlayer = React.createClass({
 
 
 styles = {
-	camera: function(recording) {
+	show: function(display) {
 		const cameraStyle = {};
-		if (recording) {
-			cameraStyle.display = 'block';
-		} else {
-			cameraStyle.display = 'none';
-		}
+		cameraStyle.display = (display) ? 'block' : 'none';
 		return cameraStyle;
 	},
-	mouse: {
-		position: 'absolute',
-		top: '50px',
-		left: '50px',
-		zIndex: '1000000000',
-		pointerEvents: 'none',
+	mouse: function(mouseX, mouseY) {
+		return {
+			position: 'absolute',
+			top: mouseY || 50,
+			left: mouseX || 50,
+			zIndex: '1000000000',
+			pointerEvents: 'none',
+		};
 	},
 	mousePointer: {
 		width: '20px',
@@ -193,29 +222,40 @@ styles = {
 		top: '26px',
 		backgroundImage: 'url("http://www.szczepanek.pl/icons.grass/v.0.1/img/standard/gui-pointer.gif")',
 	},
-	mouseTriangle: {
-		width: 0,
-		height: 0,
-		borderLeft: '5px solid transparent',
-		borderRight: '5px solid transparent',
-		borderTop: '5px solid rgba(187, 40, 40, 0.59)',
-		fontSize: 0,
-		lineHeight: 0,
-		position: 'relative',
-		left: '6px',
-		display: 'block',
-		zIndex: '1000000',
+	mouseTriangle: function(clamped) {
+		const triangleColor = (!clamped) ? 'rgba(187, 40, 40, 0.59)' : 'rgba(187, 40, 40, 0.85)';
+		const triangleStyles = {
+			width: 0,
+			height: 0,
+			borderLeft: '5px solid transparent',
+			borderRight: '5px solid transparent',
+			borderTop: `5px solid ${triangleColor}`,
+			fontSize: 0,
+			lineHeight: 0,
+			position: 'relative',
+			left: (!clamped) ? '6px' : '50%',
+			display: 'block',
+			zIndex: '1000000',
+			transition: 'left 0.5s ease-in-out',
+		};
+		if (clamped === 'bottom') {
+			triangleStyles.top = '-25px';
+			triangleStyles.transform = 'rotate(180deg)';
+		}
+		return triangleStyles;
 	},
-	mouseTooltip: {
-		fontSize: '0.75em',
-		position: 'relative',
-		top: '-25px',
-		left: '6px',
-		backgroundColor: 'rgba(187, 40, 40, 0.59)',
-		color: 'white',
-		padding: '3px 5px',
-		borderRadius: '1px',
-		fontWeight: '300',
+	mouseTooltip: function(clamped) {
+		return {
+			fontSize: '0.75em',
+			position: 'relative',
+			top: '-25px',
+			left: '6px',
+			backgroundColor: (!clamped) ? 'rgba(187, 40, 40, 0.59)' : 'rgba(187, 40, 40, 0.85)',
+			color: 'white',
+			padding: '3px 5px',
+			borderRadius: '1px',
+			fontWeight: '300',
+		};
 	}
 };
 

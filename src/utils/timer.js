@@ -34,7 +34,11 @@ export default function Timer(callback, delay, interval = false) {
 		if (!finished) {
 			start = new Date();
 			clearTimer(timerId);
-			timerId = setTimer(finishCallback, remaining);
+			if (!interval) {
+				timerId = setTimer(finishCallback, remaining);
+			} else {
+				timerId = setTimer(finishCallback, delay);
+			}
 		}
 	};
 

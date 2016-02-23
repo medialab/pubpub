@@ -167,7 +167,7 @@ const VideoReviews = React.createClass({
 	render: function() {
 
 		return (
-			<Portal>
+			<Portal portalId="actionRecorderPointer">
 				<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.show(this.state.recording)]}>
 					<span style={styles.mouseTriangle}/>
 					<span style={styles.mouseTooltip}>{`Recording (${hhmmss(this.state.seconds)})`}</span>

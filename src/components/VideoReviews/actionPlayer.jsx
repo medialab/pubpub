@@ -116,12 +116,11 @@ const ActionPlayer = React.createClass({
 		let clamped = true;
 
 		if (mouseY > clientHeight - 25) {
-			mouseY = clientHeight;
+			mouseY = clientHeight - 7;
 			clamped = 'bottom';
 		} else if (mouseY < 30) {
-			mouseY = 47;
+			mouseY = 53;
 			clamped = 'top';
-			console.log('Clamped !', mouseY);
 		} else {
 			clamped = null;
 		}
@@ -238,7 +237,7 @@ styles = {
 			zIndex: '1000000',
 			transition: 'left 0.5s ease-in-out',
 		};
-		if (clamped === 'bottom') {
+		if (clamped === 'top') {
 			triangleStyles.top = '-25px';
 			triangleStyles.transform = 'rotate(180deg)';
 		}

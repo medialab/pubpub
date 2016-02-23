@@ -10,6 +10,11 @@ let styles = {};
 let Rangy = null;
 let Marklib = null;
 
+
+const seekStyle = {float: 'right', verticalAlign: 'middle', fontSize: '0.75em', cursor: 'pointer', lineHeight: '34px'};
+
+const CustomComponent = (props) => (<span style={seekStyle} onClick={(evt) => props.seek(100)}>Stop Video Comment</span>);
+
 function xhrGet(url, callback) {
 	const request = new XMLHttpRequest();
 	request.onreadystatechange = function() {
@@ -81,6 +86,7 @@ const VideoReviewPlugin = React.createClass({
 	},
 
 	stopPlaying: function() {
+		this.refs.camera.stop();
 		this.refs.actionPlayer.stop();
 		this.setState({playing: false, paused: false});
 	},
@@ -122,10 +128,10 @@ const VideoReviewPlugin = React.createClass({
 		let elem;
 		if (!this.state.error) {
 			if (this.state.playing) {
-				elem = (<span style={styles.button} onClick={this.stopPlaying.bind(this)}>📹 - Playing</span>);
+				elem = (<span></span>);
 			} else if (!this.state.uploading) {
 				elem = (<span style={styles.button} onClick={this.fetchAndPlay}>
-					📹 {(this.props.duration) ? `- ${hhmmss(this.props.duration / 1000)}` : null }
+					▶ {(this.props.duration) ? `- ${hhmmss(this.props.duration / 1000)}` : null }
 				</span>);
 			} else {
 				elem = (<span style={styles.button}>
@@ -154,6 +160,7 @@ const VideoReviewPlugin = React.createClass({
 						<Play />
 						<Time />
 						<Mute />
+						<CustomComponent/>
 					</Controls>
 				</Video>
 			</div>
@@ -223,8 +230,21 @@ styles = {
 		margin: 'auto',
 	},
 	button: {
-		backgroundColor: 'white',
+		backgroundColor: '#717070',
 		cursor: 'pointer',
+		height: '75px',
+		width: '75px',
+		display: 'block',
+		fontSize: '0.75em',
+		textAlign: 'center',
+		verticalAlign: 'middle',
+		lineHeight: '75px',
+		borderRadius: '5px',
+		color: 'white',
+		marginTop: '15px',
+		':hover': {
+			color: '#d9d9d9',
+		},
 	},
 	wrapper: {
 		position: 'fixed',

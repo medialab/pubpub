@@ -3,11 +3,8 @@ import Media from '../baseMediaPlugin';
 import createPubPubPlugin from '../PubPub';
 import {Reference} from '../../';
 
-console.log('WE LOADED THE QUOTE PLUGIN');
-
-
 const QuoteInputFields = [
-	{title: 'quote', type: 'text', params: {placeholder: 'Caption describing the image'}},
+	{title: 'quote', type: 'text', params: {placeholder: 'Text of the quotation'}},
 	{title: 'attribution', type: 'text', params: {placeholder: 'Who said it'}},
 	{title: 'align', type: 'align'},
 	{title: 'size', type: 'size'},
@@ -20,8 +17,6 @@ const QuoteConfig = {
 	autocomplete: true,
 	highlight: 'rgba(245, 245, 169, 0.5)'
 };
-
-
 
 let styles = {};
 

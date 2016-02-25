@@ -5,8 +5,16 @@ import {globalStyles} from '../../utils/styleConstants';
 import {globalMessages} from '../../utils/globalMessages';
 import {FormattedMessage} from 'react-intl';
 
+import Plugins from '../EditorPluginsNew/index.js';
+
 let styles = {};
-const formattingOptions = ['H1', 'H2', 'H3', 'Bold', 'Italic', '# List', '- List', 'Line', 'Link', 'Image', 'Video', 'Cite', 'Pagebreak', 'Linebreak', 'Quote'];
+const formattingOptions = ['H1', 'H2', 'H3', 'Bold', 'Italic', '# List', '- List', 'Line', 'Link', 'Pagebreak', 'Linebreak'];
+
+for (const pluginName in Plugins) {
+	if (Plugins.hasOwnProperty(pluginName)) {
+		formattingOptions.push(pluginName);
+	}
+}
 
 const EditorBottomNav = React.createClass({
 	propTypes: {

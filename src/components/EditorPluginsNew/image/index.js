@@ -3,15 +3,12 @@ import ImageLoader from 'react-imageloader';
 import Media from '../baseMediaPlugin';
 import createPubPubPlugin from '../PubPub';
 
-console.log('WE LOADED THE IMAGE PLUGIN');
-
 const ImageInputFields = [
 	{title: 'source', type: 'asset', params: {assetType: 'image'}},
 	{title: 'align', type: 'align'},
 	{title: 'size', type: 'size'},
 	{title: 'caption', type: 'text', params: {placeholder: 'Caption describing the image'}},
 	{title: 'reference', type: 'reference'},
-
 ];
 
 const ImageConfig = {
@@ -20,8 +17,6 @@ const ImageConfig = {
 	autocomplete: true,
 	highlight: 'rgba(185, 215, 249, 0.5)'
 };
-
-// let styles = {};
 
 const ImagePlugin = React.createClass({
 	propTypes: {
@@ -55,7 +50,6 @@ const ImagePlugin = React.createClass({
 		const caption = this.props.caption;
 		const reference = this.props.reference;
 
-		let html;
 		const imgProps = {style: {width: '100%', height: '100%'}};
 
 		return (<Media caption={caption} size={size} align={align} reference={reference}>

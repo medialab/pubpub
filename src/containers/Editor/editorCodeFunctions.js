@@ -1,5 +1,7 @@
 /* global CodeMirror */
 
+import Plugins from '../../components/EditorPluginsNew/index.js';
+
 export function insertText(cm, formatting, showPopup) {
 
 	const currentSelection = cm.getSelection();
@@ -33,31 +35,21 @@ export function insertText(cm, formatting, showPopup) {
 	case 'Link':
 		cm.replaceSelection('[Link Title](http:// Link URL)');
 		break;
-	case 'Image':
-		cm.replaceSelection('[[image: ]]');
-		showPopup();
-		break;
-	case 'Video':
-		cm.replaceSelection('[[video: ]]');
-		showPopup();
-		break;
-	case 'Cite':
-		cm.replaceSelection('[[cite: ]]');
-		showPopup();
-		break;
 	case 'Pagebreak':
 		cm.replaceSelection('[[pagebreak]]');
 		break;
 	case 'Linebreak':
 		cm.replaceSelection('[[linebreak]]');
 		break;
-	case 'Quote':
-		cm.replaceSelection('[[quote: ]]');
-		break;
 	default:
-		throw new Error('Insert command not found');
+		if (Plugins.hasOwnProperty(formatting)) {
+			cm.replaceSelection('[[' + formatting + ': ]]');
+			showPopup();
+		} else {
+			throw new Error('Insert command not found');
+		}
 	}
-
+	
 	return;
 
 }

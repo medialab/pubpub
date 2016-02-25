@@ -3,8 +3,6 @@ import ErrorMsg from '../ErrorPlugin';
 import {Reference} from '../../';
 import createPubPubPlugin from '../PubPub';
 
-console.log('WE LOADED THE CITE PLUGIN');
-
 let styles = {};
 
 const CiteInputFields = [

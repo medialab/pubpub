@@ -3,8 +3,6 @@ import Media from '../baseMediaPlugin';
 import createPubPubPlugin from '../PubPub';
 import ErrorMsg from '../ErrorPlugin';
 
-console.log('WE LOADED THE VIDEO PLUGIN');
-
 const VideoInputFields = [
 	{title: 'source', type: 'asset', params: {assetType: 'video'}},
 	{title: 'align', type: 'align'},

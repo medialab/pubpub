@@ -7,16 +7,15 @@ const plugins = {
 
 const includePlugins = {
 	image: true,
-	quote: false,
+	quote: true,
 	video: true,
-	cite: false,
+	cite: true,
 };
 
 const exportPlugins = {};
 
 for (const pluginName in plugins) {
 	if (plugins.hasOwnProperty(pluginName) && typeof plugins[pluginName] === 'function' && includePlugins[pluginName]) {
-		console.log('requesting', pluginName);
 		exportPlugins[pluginName] = plugins[pluginName]();
 	}
 }

@@ -50,8 +50,9 @@ const TablePlugin = Radium(React.createClass({
 		loadData(url, 'csv', {
 			skip_empty_lines: true,
 			auto_parse: true,
-			columns: true
-		}, (data) => this.setState({data: data}));
+			columns: true,
+			auto_parse_date: true
+		}, (data) => {console.log(data); this.setState({data: data});});
 	},
 	componentWillReceiveProps(nextProps) {
 		if (nextProps.source && nextProps.source.url_s3 !== this.state.url) {
@@ -93,6 +94,13 @@ const TablePlugin = Radium(React.createClass({
 						overflowX: 'auto'
 					}
 				}} />
+				<Style
+					scopeSelector="tr.standard-row"
+					rules={{
+						td: {
+							whiteSpace: 'nowrap'
+						}
+					}} />
 				<Griddle
 					enableInfiniteScroll={true}
 					bodyHeight={height}

@@ -2,7 +2,8 @@ const plugins = {
 	image: require('./image/index.js'),
 	video: require('./video/index.js'),
 	cite: require('./cite/index.js'),
-	quote: require('./quote/index.js')
+	quote: require('./quote/index.js'),
+	table: require('./table/index.js')
 };
 
 const includePlugins = {
@@ -10,6 +11,7 @@ const includePlugins = {
 	quote: true,
 	video: true,
 	cite: true,
+	table: true
 };
 
 const exportPlugins = {};

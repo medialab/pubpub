@@ -1,6 +1,8 @@
 // CodeMirror styles function can be
 // used to dynamically change font, size, color, etc
-export function codeMirrorStyles(loginData) {
+import Plugins from '../../components/EditorPlugins/index';
+
+export function codeMirrorStyles(loginData, parentClass) {
 	const editorFont = loginData ? loginData.getIn(['userData', 'settings', 'editorFont']) : undefined;
 	const editorFontSize = loginData ? loginData.getIn(['userData', 'settings', 'editorFontSize']) : undefined;
 	const editorColor = loginData ? loginData.getIn(['userData', 'settings', 'editorColor']) : undefined;
@@ -67,7 +69,19 @@ export function codeMirrorStyles(loginData) {
 		break;
 	}
 
-	return {
+	const pluginStyles = {};
+
+	for (const pluginKey in Plugins) {
+		if (Plugins.hasOwnProperty(pluginKey)) {
+			const plugin = Plugins[pluginKey];
+			if (plugin.Config.color) {
+				pluginStyles[`.cm-plugin-${pluginKey}`] = { backgroundColor: plugin.Config.color };
+			}
+		}
+	}
+
+	const output = {
+		...pluginStyles,
 		'.CodeMirror': {
 			backgroundColor: 'transparent',
 			fontSize: editorStyles.fontSize,
@@ -75,13 +89,14 @@ export function codeMirrorStyles(loginData) {
 			fontFamily: editorStyles.fontFamily,
 			padding: '0px 20px',
 			width: 'calc(100% - 40px)',
+			lineHeight: '1.75',
 			// fontFamily: 'Alegreya',
 		},
 		'.CodeMirror-cursors': {
 			pointerEvents: 'none',
 		},
 		'.CodeMirror-cursor': {
-			borderLeft: '1px solid ' + editorStyles.cursorColor,
+			borderLeft: parentClass ? '1px solid ' + editorStyles.cursorColor : '3px solid ' + editorStyles.cursorColor,
 		},
 		'.CodeMirror .cm-spell-error': {
 			borderBottom: '1px dotted red',
@@ -122,16 +137,11 @@ export function codeMirrorStyles(loginData) {
 			cursor: 'pointer',
 			borderRadius: '2px',
 			color: '#555',
+			fontFamily: 'Courier',
 		},
 		'.cm-ppm-pagebreak': {
 			color: editorStyles.colorPagebreak,
 			fontSize: '16px',
-		},
-		'.cm-plugin-image': {
-			backgroundColor: 'rgba(185, 215, 249, 0.5)',
-		},
-		'.cm-plugin-video': {
-			backgroundColor: 'rgba(158, 219, 176, 0.5)',
 		},
 		'.cm-plugin-audio': {
 			backgroundColor: 'rgba(233, 201, 153, 0.5)',
@@ -139,16 +149,21 @@ export function codeMirrorStyles(loginData) {
 		'.cm-plugin-table': {
 			backgroundColor: 'rgba(211, 172, 223, 0.5)',
 		},
-		'.cm-plugin-cite': {
-			backgroundColor: 'rgba(245, 245, 169, 0.5)',
-		},
-		'.cm-plugin-quote': {
-			backgroundColor: 'rgba(245, 245, 169, 0.5)',
-		},
 		'.cm-plugin-iframe': {
 			backgroundColor: 'rgba(233, 201, 153, 0.5);',
 		},
 	};
+
+	if (parentClass) {
+		for (const key in output) {
+			if (output.hasOwnProperty(key)) {
+				output[parentClass + ' ' + key] = output[key];
+				delete output[key];
+			}
+		}
+	}
+
+	return output;
 }
 
 export const codeMirrorStyleClasses = {

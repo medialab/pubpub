@@ -14,13 +14,24 @@ const CiteConfig = {
 	title: 'cite',
 	inline: true,
 	autocomplete: true,
+	color: 'rgba(245, 245, 169, 0.5)',
 	prerender: function(globals, pluginProps) {
-		if (!globals.citationCount) {
-			globals.citationCount = 1;
-		} else {
-			globals.citationCount = globals.citationCount + 1;
+		if (pluginProps.reference && !isNaN(pluginProps.reference.count)) {
+			const referenceCount = pluginProps.reference.count;
+			if (!globals.citationCount) {
+				globals.citationCountCounter = 1;
+				globals.citationCount = {};
+			}
+
+			const localCount = globals.citationCount[referenceCount];
+			if (!localCount) {
+				globals.citationCount[referenceCount] = globals.citationCountCounter;
+				globals.citationCountCounter += 1;
+			}
+
+			pluginProps.count = globals.citationCount[referenceCount];
 		}
-		pluginProps.count = globals.citationCount;
+
 		return {globals, pluginProps};
 	}
 };
@@ -64,7 +75,7 @@ const CitePlugin = React.createClass({
 	// 	this.setState({expanded: false, hover: false});
 	// },
 	render: function() {
-		// let html;
+		const count = (this.props.count) ? this.props.count : 0;
 		if (this.props.error === 'empty') {
 			return <span></span>;
 		}
@@ -73,7 +84,7 @@ const CitePlugin = React.createClass({
 				{this.props.error === 'type'
 					? <ErrorMsg>Could not find reference.</ErrorMsg>
 					: <span style={[styles.ref]} onMouseOver={this.mouseOver} onMouseOut={this.mouseOut}>
-						[{this.props.count}]
+						[{count}]
 						<span style={[styles.hoverRef, this.state.hover && styles.hoverRefVisible]}>
 							<Reference citationObject={this.props.reference} mode={'mla'} />
 						</span>

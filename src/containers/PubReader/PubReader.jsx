@@ -275,6 +275,9 @@ const PubReader = React.createClass({
 						authors={pubData.history[versionIndex].authors}
 						addSelectionHandler={this.addSelection}
 						style={pubData.history[versionIndex].style}
+
+						styleScoped={pubData.history[versionIndex].styleScoped}
+
 						showPubHighlights={this.props.readerData.get('showPubHighlights')}
 						isFeatured={(pubData.featuredInList && pubData.featuredInList.indexOf(this.props.journalData.getIn(['journalData', '_id'])) > -1) || this.props.journalData.get('baseSubdomain') === null}
 						errorView={pubData.pubErrorView}
@@ -291,6 +294,7 @@ const PubReader = React.createClass({
 						closePubModalHandler={this.closePubModal}
 						closeMenuHandler={this.closeMenu}
 						activeModal={this.props.readerData.get('activeModal')}
+						isFeatured={(pubData.featuredInList && pubData.featuredInList.indexOf(this.props.journalData.getIn(['journalData', '_id'])) > -1) || this.props.journalData.get('baseSubdomain') === null}
 
 						// TOC Props
 						tocData={this.state.TOC}
@@ -312,21 +316,26 @@ const PubReader = React.createClass({
 
 				<div className="rightBar" style={[styles.rightBar, globalStyles[this.props.readerData.get('status')], pubData.markdown === undefined && {display: 'none'}]}>
 
-					<div style={rightBarStyles.sectionHeader}><FormattedMessage {...globalMessages.discussion}/></div>
-					<div style={rightBarStyles.sectionSubHeader}>
-						<div>
-							<Link to={'/pub/' + this.props.slug + '/invite'} style={globalStyles.link}><span key={'discussionButton2'} style={rightBarStyles.sectionSubHeaderSpan}>
-								<FormattedMessage {...globalMessages.inviteReviewers}/>
-							</span></Link>
-							<span style={styles.optionSeparator}>|</span>
-							<span style={styles.option} key={'discussions-highlight-toggle'} onClick={this.toggleHighlights}>
-								<FormattedMessage {...globalMessages.turnHighlights}/>
-								{' '}
-								{this.props.readerData.get('showPubHighlights')
-									? <FormattedMessage {...globalMessages.off}/>
-									: <FormattedMessage {...globalMessages.on}/> }
+					<div style={rightBarStyles.sectionHeader}>
+
+						<FormattedMessage {...globalMessages.discussion}/>
+
+							<span style={[rightBarStyles.sectionSubHeader, rightBarStyles.sectionSubHeaderInline]}>
+								<span>
+									<Link to={'/pub/' + this.props.slug + '/invite'} style={globalStyles.link}><span key={'discussionButton2'} style={rightBarStyles.sectionSubHeaderSpan}>
+										<FormattedMessage {...globalMessages.inviteReviewers}/>
+									</span></Link>
+									<span style={styles.optionSeparator}>|</span>
+									<span style={styles.option} key={'discussions-highlight-toggle'} onClick={this.toggleHighlights}>
+										<FormattedMessage {...globalMessages.turnHighlights}/>
+										{' '}
+										{this.props.readerData.get('showPubHighlights')
+											? <FormattedMessage {...globalMessages.off}/>
+											: <FormattedMessage {...globalMessages.on}/> }
+										</span>
+								</span>
 							</span>
-						</div>
+
 					</div>
 
 					<Discussions editorCommentMode={false} />

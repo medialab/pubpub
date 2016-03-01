@@ -157,7 +157,7 @@ function loadSuccess(state, result) {
 
 	if (result.message === 'Pub not in this journal') {
 		outputState.pubData = { ...defaultState.get('pubData'),
-			history: [{title: 'Pub not in this journal', markdown: '[Available on PubPub](http://www.pubpub.org/pub/' + result.slug + ')', style: {type: 'custom', cssObjectString: 'a {text-align: center; color: #555; padding: 15px 0px; display: block; font-size: 1.2em; margin: 10px auto; background-color: #F6F6F6; width: 75%; border-radius: 2px; text-decoration: none;}'}}],
+			history: [{title: 'Pub not in this journal', markdown: '[Available on PubPub](http://www.pubpub.org/pub/' + result.slug + ')', styleScoped: '#pubContent a {text-align: center; color: #555; padding: 15px 0px; display: block; font-size: 1.2em; margin: 10px auto; background-color: #F6F6F6; width: 75%; border-radius: 2px; text-decoration: none;}'}],
 			slug: result.slug,
 			pubErrorView: true,
 		};
@@ -199,7 +199,8 @@ function addDiscussionLoad(state, activeSaveID) {
 	});
 }
 
-function addDiscussionSuccess(state, result, activeSaveID) {
+function addDiscussionSuccess(state, result, activeSaveID, inEditor) {
+	if (inEditor) {return state;}
 	function findParentAndAdd(discussions, parentID, newChild) {
 		discussions.map((discussion)=>{
 			if (discussion._id === parentID) {
@@ -221,6 +222,7 @@ function addDiscussionSuccess(state, result, activeSaveID) {
 		discussionsObject = discussionsArray;
 	}
 	const newState = state.mergeIn(['pubData', 'discussions'], discussionsObject);
+
 	return newState.merge({
 		addDiscussionStatus: 'loaded',
 		activeSaveID: null,
@@ -374,7 +376,7 @@ export default function readerReducer(state = defaultState, action) {
 	case ADD_DISCUSSION:
 		return addDiscussionLoad(state, action.activeSaveID);
 	case ADD_DISCUSSION_SUCCESS:
-		return addDiscussionSuccess(state, action.result, action.activeSaveID);
+		return addDiscussionSuccess(state, action.result, action.activeSaveID, action.inEditor);
 	case ADD_DISCUSSION_FAIL:
 		return addDiscussionFail(state, action.error, action.activeSaveID);
 

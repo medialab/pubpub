@@ -4,6 +4,7 @@ var passport = require('passport');
 var Pub = require('../models').Pub;
 var User = require('../models').User;
 var Journal = require('../models').Journal;
+var Notification = require('../models').Notification;
 import {cloudinary} from '../services/cloudinary';
 import {sendResetEmail} from '../services/emails';
 
@@ -41,16 +42,20 @@ app.post('/login', passport.authenticate('local'), function(req, res) {
 			const userID = user._id;
 			const isAdmin = journal && String(journal.admins).indexOf(String(userID)) > -1 ? true : false;
 
-			return res.status(201).json({
-				name: user.name,
-				firstName: user.firstName,
-				lastName: user.lastName,
-				username: user.username,
-				image: user.image,
-				thumbnail: user.thumbnail,
-				settings: user.settings,
-				following: req.user.following,
-				isAdminToJournal: isAdmin,
+			Notification.getUnreadCount(user._id, function(err, notificationCount) {
+
+				return res.status(201).json({
+					name: user.name,
+					firstName: user.firstName,
+					lastName: user.lastName,
+					username: user.username,
+					image: user.image,
+					thumbnail: user.thumbnail,
+					settings: user.settings,
+					following: req.user.following,
+					isAdminToJournal: isAdmin,
+					notificationCount: notificationCount,
+				});
 
 			});
 
@@ -85,6 +90,7 @@ app.post('/register', function(req, res) {
 				lastName: req.body.lastName,
 				name: req.body.fullname, 
 				registerDate: new Date(Date.now()),
+				sendNotificationDigest: true,
 			});
 
 			User.register(newUser, req.body.password, function(err, account) {

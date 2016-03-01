@@ -3,10 +3,14 @@ import Radium from 'radium';
 import {parsePluginString} from '../../utils/parsePlugins';
 
 import {globalMessages} from '../../utils/globalMessages';
+
 import {FormattedMessage} from 'react-intl';
 
 import Plugins from '../../components/EditorPlugins/index.js';
 import InputFields from '../EditorPluginFields/index.js';
+import MurmurHash from 'murmurhash';
+import Portal from 'react-portal';
+
 
 let styles = {};
 const POPUP_WIDTH = 425;
@@ -19,6 +23,7 @@ const EditorPluginPopup = React.createClass({
 		assets: PropTypes.object,
 		references: PropTypes.object,
 		selections: PropTypes.object,
+		isLivePreview: PropTypes.bool,
 	},
 
 	getDefaultProps: function() {
@@ -36,7 +41,10 @@ const EditorPluginPopup = React.createClass({
 			yLoc: 0,
 			initialString: '',
 			activeLine: undefined,
-			pluginType: ''
+			pluginType: '',
+			assets: [],
+			references: [],
+			selections: [],
 		};
 	},
 
@@ -46,7 +54,7 @@ const EditorPluginPopup = React.createClass({
 
 	},
 	onpluginKeyPress(evt) {
-		if (evt.keyCode === 13) {
+		if (evt.keyCode === 13 && this.state.popupVisible) {
 			if (document.activeElement === document.body) {
 				this.onPluginSave();
 			}
@@ -55,14 +63,18 @@ const EditorPluginPopup = React.createClass({
 	componentWillReceiveProps(nextProps) {
 
 		// If a re-render causes this component to receive new props, but the props haven't changed, return.
-		if (this.props.codeMirrorChange === nextProps.codeMirrorChange) {
+		if (this.props.codeMirrorChange === nextProps.codeMirrorChange
+			&& this.props.assets === nextProps.assets
+			&& this.props.references === nextProps.references
+			&& this.props.selections === nextProps.selections) {
 			return null;
 		}
 
-		this.assets = (this.props.assets) ? Object.values(this.props.assets) : [];
-		this.references = (this.props.references) ? Object.values(this.props.references) : [];
-		this.selections = (this.props.selections) ? Object.values(this.props.selections) : [];
+		const assets = (nextProps.assets) ? Object.values(nextProps.assets) : [];
+		const references = (nextProps.references) ? Object.values(nextProps.references) : [];
+		const selections = (nextProps.selections) ? Object.values(nextProps.selections) : [];
 
+		this.setState({assets: assets, references: references, aselections: selections});
 
 		const change = nextProps.codeMirrorChange;
 
@@ -131,10 +143,32 @@ const EditorPluginPopup = React.createClass({
 		const target = document.elementFromPoint(clickX, clickY);
 		const contentBody = document.getElementById('editor-text-wrapper');
 
-		if (target.className.indexOf('cm-plugin') > -1) {
+		if (target && target.className.indexOf('cm-plugin') > -1) {
 			const cm = this.getActiveCodemirrorInstance();
+
+			const selectedLine = cm.coordsChar({left: clickX, top: clickY, mode: 'window'});
+			const activeChar = selectedLine.ch;
+			const activeLine = selectedLine.line;
+			let activeToken = null;
+
+			const selectedTokens = cm.getLineTokens(selectedLine.line);
+			for (const token of selectedTokens) {
+				if (token.start <= activeChar && activeChar <= token.end) {
+					activeToken = token;
+				}
+			}
+
+			if (!activeToken) {
+				console.error('Could not find the active token!');
+				return;
+			}
+
+
 			// const pluginString = target.parentElement.textContent.slice(2, -2); // Original string minus the brackets
-			const pluginString = target.innerHTML.slice(2, -2); // Original string minus the brackets
+			// const pluginString = target.innerHTML.slice(2, -2); // Original string minus the brackets
+
+			const pluginString = activeToken.string.slice(2, -2);
+
 			const pluginSplit = pluginString.split(':');
 			const pluginType = pluginSplit[0];
 			const valueString = pluginSplit.length > 1 ? pluginSplit[1] : ''; // Values split into an array
@@ -153,8 +187,10 @@ const EditorPluginPopup = React.createClass({
 				popupVisible: true,
 				xLoc: xLoc,
 				yLoc: yLoc,
-				activeLine: cm.getCursor().line,
+				activeLine: activeLine,
+				activeToken: activeToken,
 				pluginType: pluginType,
+				pluginHash: MurmurHash.v2(valueString),
 				initialString: pluginString,
 				values: values,
 				flippedX: flippedX,
@@ -163,32 +199,20 @@ const EditorPluginPopup = React.createClass({
 
 			this.focusFields();
 
-		} else {
-			if (document.getElementById('plugin-popup').contains(event.target)) {
-				if (!this.state.popupVisible) {
-					this.setState({
-						popupVisible: true,
-					});
-				}
-			} else if (this.state.popupVisible === true) {
-				this.setState({
-					popupVisible: false,
-					activeLine: undefined,
-				});
-			}
 		}
 	},
 
 	onPluginSave: function() {
 		const cm = this.getActiveCodemirrorInstance();
 		const lineNum = this.state.activeLine;
-		const lineContent = cm.getLine(lineNum);
-		const from = {line: lineNum, ch: 0};
-		const to = {line: lineNum, ch: lineContent.length};
+		// const from = {line: lineNum, ch: 0};
+		// const to = {line: lineNum, ch: lineContent.length};
+		const from = {line: lineNum, ch: this.state.activeToken.start};
+		const to = {line: lineNum, ch: this.state.activeToken.end};
 
-		const mergedString = this.createPluginString(this.state.pluginType);
-		const outputString = lineContent.replace(this.state.initialString, mergedString);
-		cm.replaceRange(outputString, from, to); // Since the popup closes on change, this will close the pluginPopup
+		const mergedString = `[[${this.createPluginString(this.state.pluginType)}]]`;
+		// const outputString = lineContent.replace(this.state.initialString, mergedString);
+		cm.replaceRange(mergedString, from, to); // Since the popup closes on change, this will close the pluginPopup
 	},
 
 	createPluginString: function(pluginType) {
@@ -213,42 +237,49 @@ const EditorPluginPopup = React.createClass({
 		return mergedString;
 	},
 
+	closePopup: function() {
+		this.setState({popupVisible: false});
+	},
+
 	render: function() {
 
 		const PluginInputFields = (this.state.pluginType) ? Plugins[this.state.pluginType].InputFields : [];
 
 		return (
-			<div id="plugin-popup"
-					ref={(ref) => this.popupBox = ref}
-					className="plugin-popup"
-					style={[styles.pluginPopup, styles.pluginPopupPos(this.state.xLoc, this.state.yLoc, this.state.flippedY), this.state.popupVisible && styles.pluginPopupVisible]}
-				>
-				<div style={styles.pluginPopupArrow(this.state.flippedX, this.state.flippedY)}></div>
-				<div style={styles.pluginContent}>
-					<div style={styles.pluginPopupTitle}>
-						{this.state.pluginType}</div>
-						{
-								PluginInputFields.map((inputField)=>{
-									const fieldType = inputField.type;
-									const fieldTitle = inputField.title;
-									const PluginInputFieldParams = inputField.params;
-									const FieldComponent = InputFields[fieldType];
-									const value = (this.state) ? this.state.values[fieldTitle] || null : null;
+			<Portal onClose={this.closePopup} isOpened={this.state.popupVisible} closeOnOutsideClick closeOnEsc>
+				<div style={styles.pluginFlexBox(this.props.isLivePreview)}>
+					<div id="plugin-popup"
+							ref={(ref) => this.popupBox = ref}
+							className="plugin-popup"
+							style={[styles.pluginPopup(this.props.isLivePreview), this.state.popupVisible && styles.pluginPopupVisible]}
+						>
+						<div key={this.state.pluginHash} style={styles.pluginContent}>
+							<div style={styles.pluginPopupTitle}>
+								{this.state.pluginType}</div>
+								{
+										PluginInputFields.map((inputField)=>{
+											const fieldType = inputField.type;
+											const fieldTitle = inputField.title;
+											const PluginInputFieldParams = inputField.params;
+											const FieldComponent = InputFields[fieldType];
+											const value = (this.state) ? this.state.values[fieldTitle] || null : null;
 
-									return (<div key={'pluginVal-' + fieldTitle + this.state.pluginType} style={styles.pluginOptionWrapper}>
-														<label htmlFor={fieldType} style={styles.pluginOptionLabel}>{fieldTitle}</label>
-														<div style={styles.pluginPropWrapper}>
-															<FieldComponent selectedValue={value} references={this.references} assets={this.assets} selections={this.selections} {...PluginInputFieldParams} ref={(ref) => this.popupInputFields[fieldTitle] = ref}/>
-														</div>
-														<div style={styles.clearfix}></div>
-													</div>);
-								})
-						}
-					<div style={styles.pluginSave} key={'pluginPopupSave'} onClick={this.onPluginSave}>
-						<FormattedMessage {...globalMessages.save} />
+											return (<div key={'pluginVal-' + fieldTitle + this.state.pluginType} style={styles.pluginOptionWrapper}>
+																<label htmlFor={fieldType} style={styles.pluginOptionLabel}>{fieldTitle}</label>
+																<div style={styles.pluginPropWrapper}>
+																	<FieldComponent selectedValue={value} references={this.state.references} assets={this.state.assets} selections={this.state.selections} {...PluginInputFieldParams} ref={(ref) => this.popupInputFields[fieldTitle] = ref}/>
+																</div>
+																<div style={styles.clearfix}></div>
+															</div>);
+										})
+								}
+							<div style={styles.pluginSave} key={'pluginPopupSave'} onClick={this.onPluginSave}>
+								<FormattedMessage {...globalMessages.save} />
+							</div>
+						</div>
 					</div>
 				</div>
-			</div>
+			</Portal>
 		);
 
 	}
@@ -258,33 +289,44 @@ export default Radium(EditorPluginPopup);
 
 
 styles = {
-	pluginPopup: {
-		width: POPUP_WIDTH,
-		// minHeight: 200,
-		backgroundColor: 'white',
-		boxShadow: '0px 0px 2px 0px #333',
-		position: 'absolute',
-		opacity: 0,
-		transform: 'scale(0.8)',
-		transition: '.02s linear transform, .02s linear opacity',
-		zIndex: 50,
-		pointerEvents: 'none',
-		padding: 5,
-		borderRadius: '1px',
+	pluginFlexBox: function(isLivePreview) {
+		return {
+			position: 'fixed',
+			left: '0vw',
+			top: '0vh',
+			// display: 'flex',
+			// alignItems: 'center',
+			height: '100vh',
+			width: (isLivePreview) ? '50vw' : '100vw',
+			zIndex: 50,
+			backgroundColor: 'rgba(255,255,255,0.5)',
+			pointerEvents: 'none',
+		};
+	},
+	pluginPopup: function(isLivePreview) {
+		return {
+			width: (isLivePreview) ? '30vw' : '35vw',
+			minWidth: '425px',
+			position: 'relative',
+			margin: (isLivePreview) ? '0px 7vw' : '0px 29.5vw',
+			top: '10vh',
+			// minHeight: 200,
+			backgroundColor: 'white',
+			boxShadow: '0px 0px 2px 0px #333',
+			// left: `calc(50vw - ${POPUP_WIDTH / 2}px)`,
+			minHeight: '35vh',
+			opacity: 0,
+			transform: 'scale(0.8)',
+			transition: '.02s linear transform, .02s linear opacity',
+			zIndex: 50,
+			padding: '2vh 3vw',
+			borderRadius: '1px',
+		};
 	},
 	pluginPopupVisible: {
 		opacity: 1,
 		transform: 'scale(1.0)',
 		pointerEvents: 'auto',
-	},
-	pluginPopupPos: function(xLoc, yLoc, flipY) {
-		const pos = {left: xLoc};
-		if (flipY) {
-			pos.bottom = yLoc;
-		} else {
-			pos.top = yLoc;
-		}
-		return pos;
 	},
 	pluginPopupArrow: function(flipX, flipY) {
 		const xWidth = (flipX) ? POPUP_WIDTH - 25 : 15;
@@ -323,6 +365,8 @@ styles = {
 		fontSize: '18px',
 		display: 'inline-block',
 		float: 'right',
+		color: '#666',
+		fontFamily: '"Lato", sans-serif',
 		marginBottom: '15px',
 		':hover': {
 			cursor: 'pointer',

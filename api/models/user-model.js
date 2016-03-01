@@ -5,6 +5,7 @@ var ObjectId  = Schema.Types.ObjectId;
 var passportLocalMongoose = require('passport-local-mongoose');
 
 var Discussion = require('../models').Discussion;
+var Notification = require('../models').Notification;
 
 var userSchema = new Schema({
   email: { type: String, required: true, index: { unique: true } },
@@ -26,7 +27,7 @@ var userSchema = new Schema({
   
   yays: [ { type: ObjectId, ref: 'Discussion' } ],
   nays: [ { type: ObjectId, ref: 'Discussion' } ],
-  reviews: [ { type: ObjectId, ref: 'Review' } ],
+  // reviews: [ { type: ObjectId, ref: 'Review' } ],
   
   emailPublic: { type: Boolean },
   resetHash: { type: String },
@@ -45,6 +46,7 @@ var userSchema = new Schema({
   },
 
   followers: [{ type: ObjectId, ref: 'User' }],
+  sendNotificationDigest: { type: Boolean },
 });
 
 userSchema.plugin(passportLocalMongoose,{'usernameField':'email', 'digestAlgorithm':'sha1'});
@@ -75,36 +77,84 @@ userSchema.statics.generateUniqueUsername = function (fullname, callback) {
 
 userSchema.statics.getUser = function (username, readerID, callback) {
   this.findOne({username: username})
-  .populate({path: "pubs", select:"title abstract slug collaborators settings"})
-  .populate({path: "discussions", select:"markdown postDate yays nays pub"})
+  .populate([ 
+    {path: "pubs", select:"title abstract slug collaborators settings status"},
+    {path: "following.pubs", select:"title abstract slug"},
+    {path: "following.users", select:"name username thumbnail"},
+    {path: "following.journals", select:"customDomain journalName subdomain"},
+    {path: "groups", select:"groupName groupSlug"},
+    {path: "followers", select:"name username thumbnail"},
+    {
+      path: "discussions", 
+      select:"markdown postDate yays nays pub",
+      populate: [{
+        path: 'pub',
+        model: 'Pub',
+        select: 'title slug',
+      }]
+    },
+  ])
   .lean().exec((err, user) =>{
     if (err) { return callback(err, null); }
     if (!user) { return callback(null, 'User Not Found'); }
 
-    const options = [
-      { path: 'discussions.pub', select: 'title slug', model: 'Pub'},
-    ];
+    const sortedPubs = {
+      published: [],
+      unpublished: [],
+      canRead: [],
+    };
 
-    this.populate(user, options, (err, populatedUser)=> {
-      if (err) { return callback(err, null); }
+    for (let index = user.pubs.length; index--;) {
 
-      const outputUser = {
-        _id: populatedUser._id,
-        username: populatedUser.username,
-        image: populatedUser.image,
-        name: populatedUser.name,
-        firstName: populatedUser.firstName,
-        lastName: populatedUser.lastName,
-        title: populatedUser.title,
-        bio: populatedUser.bio,
-        pubs: populatedUser.pubs,
-        discussions: Discussion.calculateYayNayScore(populatedUser.discussions),
-        followers: populatedUser.followers,
+      if (user.pubs[index].collaborators.canEdit.toString().split(',').indexOf(user._id.toString()) > -1) {
+        if (user.pubs[index].status === 'Unpublished') { 
+          sortedPubs.unpublished.push(user.pubs[index]);
+        } else {
+          sortedPubs.published.push(user.pubs[index]);
+        }
+      } else {
+        sortedPubs.canRead.push(user.pubs[index]);
       }
-      return callback(null, outputUser);
 
-    });
-  })
+    }
+    
+    if (String(readerID) !== String(user._id)) {
+      sortedPubs.unpublished = [];
+      sortedPubs.canRead = [];
+      user.groups = [];
+    } 
+
+    const outputUser = {
+      _id: user._id,
+      username: user.username,
+      image: user.image,
+      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      title: user.title,
+      bio: user.bio,
+      pubs: sortedPubs,
+      groups: user.groups,
+      discussions: Discussion.calculateYayNayScore(user.discussions),
+      followers: user.followers,
+      following: user.following,
+      notifications: [],
+      sendNotificationDigest: user.sendNotificationDigest,
+    }
+
+    // This feels a bit awkward - but is nice because we don't populate notifications unless we need to - which should make load times better.
+    if (String(readerID) === String(user._id)) {
+      Notification.getNotifications(user._id, function(err, notifications){
+        outputUser.notifications = notifications;
+        return callback(null, outputUser);
+      });
+    } else {
+      return callback(null, outputUser);  
+    }
+
+    
+
+  });
 };
 
 module.exports = mongoose.model('User', userSchema);

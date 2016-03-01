@@ -36,6 +36,11 @@ app.use(favicon(path.join(__dirname, '..', 'static', 'favicon.ico')));
 app.use(require('serve-static')(path.join(__dirname, '..', 'static')));
 
 // Proxy to API server
+app.use('/data', (req, res) => {
+	proxy.web(req, res);
+});
+
+// Proxy to API server
 app.use('/api', (req, res) => {
 	proxy.web(req, res);
 });
@@ -109,6 +114,20 @@ app.use((req, res) => {
 				)
 				const mainBundle = webpackIsomorphicTools.assets().javascript.main;
 				const head = Helmet.rewind();
+				
+				let dynamicStyle;
+				const pathname = store.getState().router.location.pathname;
+				
+				if (pathname.substring(0,5) === '/pub/' && pathname.substring(pathname.length-6, pathname.length) !== '/draft') {
+					// source = store.getState().pub.getIn(['pubData', 'history']);
+					const versionIndex = store.getState().router.location.query.version !== undefined && store.getState().router.location.query.version > 0 && store.getState().router.location.query.version <= (store.getState().pub.getIn(['pubData', 'history']).size - 1)
+						? store.getState().router.location.query.version - 1
+						: store.getState().pub.getIn(['pubData', 'history']).size - 1;
+					dynamicStyle = store.getState().pub.getIn(['pubData', 'history', versionIndex, 'styleScoped']);
+				}
+
+				const rssRel = pathname === '/' ? 'alternate' : 'home';
+				
 				res.send(`<!doctype html>
 					<html lang="en-us">
 						<head>
@@ -120,6 +139,7 @@ app.use((req, res) => {
 							${head.title.toString()}
 							${head.meta.toString()}
 
+							<link rel=${rssRel} type="application/rss+xml" title="RSS" href="/data/rss.xml" />
 							<link rel="shortcut icon" href="/favicon.ico" />
 							<link href='https://fonts.googleapis.com/css?family=Lato:300,300italic,700,700italic,900italic|Lora:400,400italic,700,700italic' rel='stylesheet' type='text/css' />
 
@@ -130,6 +150,8 @@ app.use((req, res) => {
 							<link href='/css/print.css' rel='stylesheet' type='text/css' />
 							<link href='/css/highlightdefault.css' rel='stylesheet' type='text/css' />
 							<link href='/css/react-select.min.css' rel='stylesheet' type='text/css' />
+							<link href='/css/basePub.css' rel='stylesheet' type='text/css' />
+							<style id="dynamicStyle">${dynamicStyle}</style>
 
 							<link href='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.9.0/addon/hint/show-hint.css' rel='stylesheet' type='text/css' />
 							<!-- We could dynamically load these in Editor.jsx
@@ -150,7 +172,8 @@ app.use((req, res) => {
 							<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.1.0/highlight.min.js"></script>
 							<script src="/js/typo.js"></script>
 							<script src="/js/spellcheck.js"></script>
-
+							<script src="https://cdn.ravenjs.com/2.1.0/raven.min.js"></script>
+							
 						</head>
 
 						<body style="width: 100%; margin: 0;">

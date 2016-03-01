@@ -19,8 +19,8 @@ let styles = {};
 const Discussions = React.createClass({
 	propTypes: {
 		metaID: PropTypes.string,
-		editorCommentMode: PropTypes.bool, 
-		inEditor: PropTypes.bool, 
+		editorCommentMode: PropTypes.bool,
+		inEditor: PropTypes.bool,
 		instanceName: PropTypes.string,
 
 		pubData: PropTypes.object,
@@ -53,21 +53,23 @@ const Discussions = React.createClass({
 			return null;
 		}
 
-		// Check if it's a comment or discussion we're adding.
-		if (this.props.editorCommentMode) {
+		if (this.props.inEditor) {
 			discussionObject.pub = this.props.editorData.getIn(['pubEditData', '_id']);
 			discussionObject.version = 0;
 			discussionObject.selections = this.props.editorData.getIn(['newDiscussionData', 'selections']);
-			// console.log('about to dispatch addComment ', discussionObject, activeSaveID);
-			this.props.dispatch(addComment(discussionObject, activeSaveID));
 		} else {
 			discussionObject.pub = this.props.pubData.getIn(['pubData', '_id']);
 			discussionObject.version = this.props.query.version !== undefined && this.props.query.version > 0 && this.props.query.version < (this.props.pubData.getIn(['pubData', 'history']).size - 1) ? this.props.query.version : this.props.pubData.getIn(['pubData', 'history']).size;
 			discussionObject.selections = this.props.pubData.getIn(['newDiscussionData', 'selections']);
-			// console.log('about to dispatch addDiscussion ', discussionObject, activeSaveID);
-			this.props.dispatch(addDiscussion(discussionObject, activeSaveID));	
 		}
-		
+
+		// Check if it's a comment or discussion we're adding.
+		if (this.props.editorCommentMode) {
+			this.props.dispatch(addComment(discussionObject, activeSaveID));
+		} else {
+			this.props.dispatch(addDiscussion(discussionObject, activeSaveID, this.props.inEditor));
+		}
+
 	},
 
 	discussionVoteSubmit: function(type, discussionID, userYay, userNay) {
@@ -138,40 +140,40 @@ const Discussions = React.createClass({
 
 	render: function() {
 		// const pubData = {discussions: []};
-		
+
 		const discussionsData = this.getDiscussionData();
-		
-		const addDiscussionStatus = this.props.editorCommentMode ? this.props.editorData.get('addDiscussionStatus') : this.props.pubData.get('addDiscussionStatus');
-		const newDiscussionData = this.props.editorCommentMode ? this.props.editorData.get('newDiscussionData') : this.props.pubData.get('newDiscussionData');
-		const activeSaveID = this.props.editorCommentMode ? this.props.editorData.get('activeSaveID') : this.props.pubData.get('activeSaveID');
-		const isPubAuthor = this.props.editorCommentMode ? !this.props.editorData.getIn(['pubEditData', 'isReader']) : this.props.pubData.getIn(['pubData', 'isAuthor']);
+
+		const addDiscussionStatus = this.props.inEditor ? this.props.editorData.get('addDiscussionStatus') : this.props.pubData.get('addDiscussionStatus');
+		const newDiscussionData = this.props.inEditor ? this.props.editorData.get('newDiscussionData') : this.props.pubData.get('newDiscussionData');
+		const activeSaveID = this.props.inEditor ? this.props.editorData.get('activeSaveID') : this.props.pubData.get('activeSaveID');
+		const isPubAuthor = this.props.inEditor ? !this.props.editorData.getIn(['pubEditData', 'isReader']) : this.props.pubData.getIn(['pubData', 'isAuthor']);
 
 		return (
 			<div style={styles.container}>
-				
+
 				<div className="pub-discussions-wrapper" style={rightBarStyles.sectionWrapper}>
 					{this.props.pubData.getIn(['pubData', 'referrer', 'name'])
 						? <div>{this.props.pubData.getIn(['pubData', 'referrer', 'name'])} invites you to comment!</div>
 						: null
 					}
-					
-					{this.props.metaID
+
+					{this.props.metaID || (!this.props.editorCommentMode && this.props.inEditor)
 						? null
-						: <DiscussionsInput 
-								addDiscussionHandler={this.addDiscussion}
-								addDiscussionStatus={addDiscussionStatus} 
-								newDiscussionData={newDiscussionData} 
-								userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])} 
-								activeSaveID={activeSaveID}
-								saveID={'root'}
-								isReply={false}
-								codeMirrorID={this.props.instanceName + 'rootCommentInput'}/>
+						: <DiscussionsInput
+							addDiscussionHandler={this.addDiscussion}
+							addDiscussionStatus={addDiscussionStatus}
+							newDiscussionData={newDiscussionData}
+							userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])}
+							activeSaveID={activeSaveID}
+							saveID={'root'}
+							isReply={false}
+							codeMirrorID={this.props.instanceName + 'rootCommentInput'}/>
 					}
-					
+
 					{
 						discussionsData.map((discussion)=>{
 							// console.log(discussion);
-							return (<DiscussionsItem 
+							return (<DiscussionsItem
 								key={discussion._id}
 								slug={this.props.slug}
 								discussionItem={discussion}
@@ -180,18 +182,26 @@ const Discussions = React.createClass({
 
 								activeSaveID={activeSaveID}
 								addDiscussionHandler={this.addDiscussion}
-								addDiscussionStatus={addDiscussionStatus} 
-								newDiscussionData={newDiscussionData} 
-								userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])} 
-								handleVoteSubmit={this.discussionVoteSubmit} 
+								addDiscussionStatus={addDiscussionStatus}
+								newDiscussionData={newDiscussionData}
+								userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])}
+								handleVoteSubmit={this.discussionVoteSubmit}
 								handleArchive={this.archiveDiscussion}
-								// noReply={!this.props.editorCommentMode && this.props.inEditor}
+								noReply={!this.props.editorCommentMode && this.props.inEditor}
 								noPermalink={this.props.editorCommentMode}/>
 							);
 						})
 					}
+
+					{(discussionsData.length === 0) ?
+						<div style={styles.emptyComments}>
+							<div>There are no comments here yet.</div> 
+							<div>Be the first to start the discussion!</div>
+						</div>
+					: null }
+
 				</div>
-				
+
 			</div>
 		);
 	}
@@ -214,5 +224,11 @@ styles = {
 		'@media screen and (min-resolution: 3dppx), screen and (max-width: 767px)': {
 			padding: '0px 10px',
 		},
-	}
+	},
+	emptyComments: {
+		margin: '40% 6% 0px 3%',
+		fontSize: '1.2em',
+		textAlign: 'center',
+		height: '70vh',
+	},
 };

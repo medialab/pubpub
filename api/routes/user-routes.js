@@ -1,5 +1,5 @@
 import app from '../api';
-import {User, Pub, Journal} from '../models';
+import {User, Pub, Journal, Notification} from '../models';
 
 import {cloudinary} from '../services/cloudinary';
 import {sendInviteEmail} from '../services/emails';
@@ -93,11 +93,19 @@ app.post('/follow', function(req, res) {
 	case 'pubs':
 		User.update({ _id: userID }, { $addToSet: { 'following.pubs': req.body.followedID} }, function(err, result){if(err) return handleError(err)});
 		Pub.update({ _id: req.body.followedID }, { $addToSet: { followers: userID} }, function(err, result){if(err) return handleError(err)});
+		Pub.findOne({_id: req.body.followedID}, {'authors':1}).lean().exec(function (err, pub) {
+			if (pub) {
+				pub.authors.map((author)=>{
+					Notification.createNotification('follows/followedPub', req.body.host, userID, author, pub._id);
+				});
+			} 
+		});
 		return res.status(201).json(req.body);
 
 	case 'users':
 		User.update({ _id: userID }, { $addToSet: { 'following.users': req.body.followedID} }, function(err, result){if(err) return handleError(err)});
 		User.update({ _id: req.body.followedID }, { $addToSet: { followers: userID} }, function(err, result){if(err) return handleError(err)});
+		Notification.createNotification('follows/followedYou', req.body.host, userID, req.body.followedID);
 		return res.status(201).json(req.body);
 
 	case 'journals':
@@ -166,13 +174,13 @@ app.post('/inviteReviewers', function(req, res) {
 
 			for (let recipient of inviteData) {
 				const recipientEmail = recipient.email;
-				const emailCallback = function(error, email) {
+				
+				sendInviteEmail(senderName, pubName, pubURL, journalName, journalURL, journalIntroduction, recipientEmail, function(error, email) {
 					if (err) {
 						console.log(error);	
 					}
 					// console.log(email);
-				};
-				sendInviteEmail(senderName, pubName, pubURL, journalName, journalURL, journalIntroduction, recipientEmail, emailCallback);
+				});
 
 			}
 
@@ -183,3 +191,20 @@ app.post('/inviteReviewers', function(req, res) {
 
 
 });
+
+app.post('/setNotificationsRead', function(req, res) {
+	if (!req.user) {
+		return res.status(201).json(false);
+	}
+	
+	if (req.user._id && String(req.user._id) !== String(req.body.userID) ) {
+		console.log('userIDs do not match');
+		return res.status(201).json(false);
+	}
+
+	Notification.setRead({recipient: req.body.userID}, ()=>{});
+	Notification.setSent({recipient: req.body.userID}, ()=>{});
+	return res.status(201).json(true)
+
+});
+

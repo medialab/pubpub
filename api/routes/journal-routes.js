@@ -5,6 +5,7 @@ var _         = require('underscore');
 var Journal = require('../models').Journal;
 var User = require('../models').User;
 var Pub = require('../models').Pub;
+var Notification = require('../models').Notification;
 import {cloudinary} from '../services/cloudinary';
 
 app.post('/createJournal', function(req,res){
@@ -45,28 +46,7 @@ app.post('/createJournal', function(req,res){
 
 app.get('/getJournal', function(req,res){
 	Journal.findOne({subdomain: req.query.subdomain})
-	.populate({path: "pubsFeatured", select:"title abstract slug settings createDate lastUpdated"})
-	.populate({path: "pubsSubmitted", select:"title abstract slug settings"})
-	.populate({path: "admins", select:"name firstName lastName username thumbnail"})
-	.populate({
-		path: "collections.pubs", 
-		select:"title abstract slug authors lastUpdated createDate discussions",
-		populate: [{
-			path: 'authors',
-			model: 'User',
-			select: 'name firstName lastName username thumbnail',
-		},
-		{
-			path: 'discussions',
-			model: 'Discussion',
-			select: 'markdown author postDate',
-			populate: {
-				path: 'author',
-				model: 'User',
-				select: 'name firstName lastName username thumbnail',
-			},
-		}],
-	})
+	.populate(Journal.populationObject())
 	.lean().exec(function(err, result){
 
 		if (err) { return res.status(500).json(err);  }
@@ -132,35 +112,7 @@ app.post('/saveJournal', function(req,res){
 		journal.save(function(err, result){
 			if (err) { return res.status(500).json(err);  }
 			
-			const options = [
-				{path: "pubs", select:"title abstract slug settings", model: 'Pub'},
-				{path: "pubsFeatured", select:"title abstract slug settings", model: 'Pub'},
-				{path: "pubsSubmitted", select:"title abstract slug settings", model: 'Pub'},
-				{path: "admins", select:"name firstName lastName username thumbnail", model: 'User'},
-				{
-					path: "collections.pubs", 
-					select:"title abstract slug authors lastUpdated createDate discussions",
-					populate: [
-						{
-							path: 'authors',
-							model: 'User',
-							select: 'name firstName lastName username thumbnail',
-						},
-						{
-							path: 'discussions',
-							model: 'Discussion',
-							select: 'markdown author postDate',
-							populate: {
-								path: 'author',
-								model: 'User',
-								select: 'name firstName lastName username thumbnail',
-							},
-						}
-					],
-				}
-			];
-
-			Journal.populate(result, options, (err, populatedJournal)=> {
+			Journal.populate(result, Journal.populationObject(), (err, populatedJournal)=> {
 				return res.status(201).json({
 					...populatedJournal.toObject(),
 					isAdmin: true,
@@ -176,11 +128,13 @@ app.post('/submitPubToJournal', function(req,res){
 	Journal.findOne({_id: req.body.journalID}).exec(function(err, journal) {
 		if (err) { return res.status(500).json(err);  }
 
-		if (!req.user || String(journal.admins).indexOf(String(req.user._id)) === -1) {
+		if (!journal) { return res.status(500).json(err);  }
+
+		if ( !journal.autoFeature && (!req.user || String(journal.admins).indexOf(String(req.user._id)) === -1) ) {
 			return res.status(403).json('Not authorized to administrate this Journal.');
 		}
 
-		if (String(journal.pubsSubmitted).indexOf(req.body.pubID) === -1) {
+		if (String(journal.pubsSubmitted).indexOf(req.body.pubID) === -1 && String(journal.pubsFeatured).indexOf(req.body.pubID) === -1) {
 			
 			Pub.addJournalSubmitted(req.body.pubID, req.body.journalID, req.user._id);
 
@@ -197,35 +151,7 @@ app.post('/submitPubToJournal', function(req,res){
 		journal.save(function(err, result){
 			if (err) { return res.status(500).json(err);  }
 			
-			const options = [
-				{path: "pubs", select:"title abstract slug settings", model: 'Pub'},
-				{path: "pubsFeatured", select:"title abstract slug settings", model: 'Pub'},
-				{path: "pubsSubmitted", select:"title abstract slug settings", model: 'Pub'},
-				{path: "admins", select:"name firstName lastName username thumbnail", model: 'User'},
-				{
-					path: "collections.pubs", 
-					select:"title abstract slug authors lastUpdated createDate discussions",
-					populate: [
-						{
-							path: 'authors',
-							model: 'User',
-							select: 'name firstName lastName username thumbnail',
-						},
-						{
-							path: 'discussions',
-							model: 'Discussion',
-							select: 'markdown author postDate',
-							populate: {
-								path: 'author',
-								model: 'User',
-								select: 'name firstName lastName username thumbnail',
-							},
-						}
-					],
-				}
-			];
-
-			Journal.populate(result, options, (err, populatedJournal)=> {
+			Journal.populate(result, Journal.populationObject(), (err, populatedJournal)=> {
 				return res.status(201).json({
 					...populatedJournal.toObject(),
 					isAdmin: true,
@@ -245,28 +171,7 @@ app.get('/loadJournalAndLogin', function(req,res){
 	// When an implicit login request is made using the cookie
 	// console.time("dbsave");
 	Journal.findOne({ $or:[ {'subdomain':req.query.host.split('.')[0]}, {'customDomain':req.query.host}]})
-	.populate({path: "pubsFeatured", select:"title abstract slug settings createDate lastUpdated"})
-	.populate({path: "pubsSubmitted", select:"title abstract slug settings"})
-	.populate({path: "admins", select:"name firstName lastName username thumbnail"})
-	.populate({
-		path: "collections.pubs", 
-		select:"title abstract slug authors lastUpdated createDate discussions",
-		populate: [{
-			path: 'authors',
-			model: 'User',
-			select: 'name firstName lastName username thumbnail',
-		},
-		{
-			path: 'discussions',
-			model: 'Discussion',
-			select: 'markdown author postDate',
-			populate: {
-				path: 'author',
-				model: 'User',
-				select: 'name firstName lastName username thumbnail',
-			},
-		}],
-	})
+	.populate(Journal.populationObject())
 	.lean().exec(function(err, result){
 		// console.timeEnd("dbsave");
 		const journalID = result ? result._id : null;
@@ -277,68 +182,73 @@ app.get('/loadJournalAndLogin', function(req,res){
 				if (err) { console.log(err); }
 				languageObject = JSON.parse(data);
 
-				const loginData = req.user 
-					? {
-						name: req.user.name,
-						firstName: req.user.firstName,
-						lastName: req.user.lastName,
-						username: req.user.username,
-						image: req.user.image,
-						thumbnail: req.user.thumbnail,
-						settings: req.user.settings,
-						following: req.user.following,
-					}
-					: 'No Session';
-
-				if (result) {
-					// If it is a journal, check if the user is an admin.
-					let isAdmin = false;
-					const userID = req.user ? req.user._id : undefined;
-					const adminsLength = result ? result.admins.length : 0;
-					for(let index = adminsLength; index--; ) {
-						if (String(result.admins[index]._id) === String(userID)) {
-							isAdmin =  true;	
+				const userID = req.user ? req.user._id : undefined;
+				Notification.getUnreadCount(userID, function(err, notificationCount) {
+					const loginData = req.user 
+						? {
+							name: req.user.name,
+							firstName: req.user.firstName,
+							lastName: req.user.lastName,
+							username: req.user.username,
+							image: req.user.image,
+							thumbnail: req.user.thumbnail,
+							settings: req.user.settings,
+							following: req.user.following,
+							notificationCount: notificationCount
 						}
-					}
+						: 'No Session';
 
-					return res.status(201).json({
-						journalData: {
-							...result,
-							isAdmin: isAdmin,
-							randomSlug: randomSlug,
-						},
-						languageData: {
-							locale: locale,
-							languageObject: languageObject,
-						},
-						loginData: loginData,
-					});
+					if (result) {
+						// If it is a journal, check if the user is an admin.
+						let isAdmin = false;
+						const userID = req.user ? req.user._id : undefined;
+						const adminsLength = result ? result.admins.length : 0;
+						for(let index = adminsLength; index--; ) {
+							if (String(result.admins[index]._id) === String(userID)) {
+								isAdmin =  true;	
+							}
+						}
 
-				} else { 
-					// If there was no result, that means we're on pubpub.org, and we need to populate journals and pubs.
-					Journal.find({}, {'_id':1,'journalName':1, 'subdomain':1, 'customDomain':1, 'pubsFeatured':1, 'collections':1, 'design': 1}).lean().exec(function (err, journals) {
-						Pub.find({history: {$not: {$size: 0}},'settings.isPrivate': {$ne: true}}, {'_id':1,'title':1, 'slug':1, 'abstract':1}).lean().exec(function (err, pubs) {
-							// console.log(res);
-							return res.status(201).json({
-								journalData: {
-									...result,
-									allJournals: journals,
-									allPubs: pubs,
-									isAdmin: false,
-									// locale: locale,
-									// languageObject: languageObject,
-									randomSlug: randomSlug,
-								},
-								languageData: {
-									locale: locale,
-									languageObject: languageObject,
-								},
-								loginData: loginData,
-							});
-
+						return res.status(201).json({
+							journalData: {
+								...result,
+								isAdmin: isAdmin,
+								randomSlug: randomSlug,
+							},
+							languageData: {
+								locale: locale,
+								languageObject: languageObject,
+							},
+							loginData: loginData,
 						});
-					});
-				}
+
+					} else { 
+						// If there was no result, that means we're on pubpub.org, and we need to populate journals and pubs.
+						Journal.find({}, {'_id':1,'journalName':1, 'subdomain':1, 'customDomain':1, 'pubsFeatured':1, 'collections':1, 'design': 1}).lean().exec(function (err, journals) {
+							Pub.find({history: {$not: {$size: 0}},'settings.isPrivate': {$ne: true}}, {'_id':1,'title':1, 'slug':1, 'abstract':1}).lean().exec(function (err, pubs) {
+								// console.log(res);
+								return res.status(201).json({
+									journalData: {
+										...result,
+										allJournals: journals,
+										allPubs: pubs,
+										isAdmin: false,
+										// locale: locale,
+										// languageObject: languageObject,
+										randomSlug: randomSlug,
+									},
+									languageData: {
+										locale: locale,
+										languageObject: languageObject,
+									},
+									loginData: loginData,
+								});
+
+							});
+						});
+					}
+					
+				});
 
 			});
 		});
@@ -350,13 +260,10 @@ app.post('/createCollection', function(req,res){
 	// return res.status(201).json(['cat','dog']);
 	Journal.findOne({subdomain: req.body.subdomain}).exec(function(err, journal) {
 		const defaultHeaderImages = [
-			'http://res.cloudinary.com/pubpub/image/upload/v1451320792/coll4_ivgyzj.jpg',
-			'http://res.cloudinary.com/pubpub/image/upload/v1451320792/coll5_nwapxj.jpg',
-			'http://res.cloudinary.com/pubpub/image/upload/v1451320792/coll6_kqgzbq.jpg',
-			// 'http://res.cloudinary.com/pubpub/image/upload/v1451320792/coll1_bfmnax.jpg',
-			// 'http://res.cloudinary.com/pubpub/image/upload/v1451320792/coll2_udefua.jpg',
-			// 'http://res.cloudinary.com/pubpub/image/upload/v1451320792/coll3_xtimc2.jpg',
-			'http://res.cloudinary.com/pubpub/image/upload/v1451320792/coll7_mrq4q9.jpg',
+			'https://res.cloudinary.com/pubpub/image/upload/v1451320792/coll4_ivgyzj.jpg',
+			'https://res.cloudinary.com/pubpub/image/upload/v1451320792/coll5_nwapxj.jpg',
+			'https://res.cloudinary.com/pubpub/image/upload/v1451320792/coll6_kqgzbq.jpg',
+			'https://res.cloudinary.com/pubpub/image/upload/v1451320792/coll7_mrq4q9.jpg',
 		];
 
 		const newCollection = {
@@ -370,31 +277,8 @@ app.post('/createCollection', function(req,res){
 		
 		journal.save(function (err, savedJournal) {
 			if (err) { return res.status(500).json(err);  }
-			const options = [
-				{
-					path: "collections.pubs", 
-					select:"title abstract slug authors lastUpdated createDate discussions",
-					populate: [
-						{
-							path: 'authors',
-							model: 'User',
-							select: 'name firstName lastName username thumbnail',
-						},
-						{
-							path: 'discussions',
-							model: 'Discussion',
-							select: 'markdown author postDate',
-							populate: {
-								path: 'author',
-								model: 'User',
-								select: 'name firstName lastName username thumbnail',
-							},
-						}
-					],
-				}
-			];
 
-			Journal.populate(savedJournal, options, (err, populatedJournal)=> {
+			Journal.populate(savedJournal, Journal.populationObject(true), (err, populatedJournal)=> {
 				if (err) { return res.status(500).json(err);  }
 
 				return res.status(201).json(populatedJournal.collections);		
@@ -424,31 +308,8 @@ app.post('/saveCollection', function(req,res){
 			}
 			journal.save(function (err, savedJournal) {
 				if (err) { return res.status(500).json(err);  }
-				const options = [
-					{
-						path: "collections.pubs", 
-						select:"title abstract slug authors lastUpdated createDate discussions",
-						populate: [
-							{
-								path: 'authors',
-								model: 'User',
-								select: 'name firstName lastName username thumbnail',
-							},
-							{
-								path: 'discussions',
-								model: 'Discussion',
-								select: 'markdown author postDate',
-								populate: {
-									path: 'author',
-									model: 'User',
-									select: 'name firstName lastName username thumbnail',
-								},
-							}
-						],
-					}
-				];
 
-				Journal.populate(savedJournal, options, (err, populatedJournal)=> {
+				Journal.populate(savedJournal, Journal.populationObject(true), (err, populatedJournal)=> {
 					if (err) { return res.status(500).json(err);  }
 
 					return res.status(201).json(populatedJournal.collections);		

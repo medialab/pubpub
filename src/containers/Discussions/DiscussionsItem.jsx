@@ -2,7 +2,6 @@ import React, {PropTypes} from 'react';
 import Radium from 'radium';
 import {globalStyles} from '../../utils/styleConstants';
 import { Link } from 'react-router';
-import dateFormat from 'dateformat';
 import DiscussionsInput from './DiscussionsInput';
 import DiscussionsScore from './DiscussionsScore';
 
@@ -10,7 +9,7 @@ import {convertListToObject} from '../../utils/parsePlugins';
 import PPMComponent from '../../markdown/PPMComponent';
 
 // import {globalMessages} from '../../utils/globalMessages';
-import {FormattedMessage} from 'react-intl';
+import {FormattedMessage, FormattedDate, FormattedRelative} from 'react-intl';
 
 let styles = {};
 
@@ -71,19 +70,18 @@ const DiscussionsItem = React.createClass({
 			showArchived: !this.state.showArchived
 		});
 	},
-	
-	render: function() {
 
+	render: function() {
 		const discussionItem = this.props.discussionItem;
 
 		const assets = convertListToObject( discussionItem.assets );
 		const references = convertListToObject(discussionItem.references, true);
 		const selections = discussionItem.selections || [];
 		const isArchived = discussionItem.archived;
-		
+
 		// console.log(discussionItem);
 		const discussionPoints = discussionItem.points ? discussionItem.points : 0; // This is to fix a NaN problem with newly published comments/discussions
-		
+
 		return (
 			isArchived && !this.state.showArchived
 				? <div style={[styles.archivedContainer, globalStyles.ellipsis]} key={'archiveBlock-' + discussionItem._id} onClick={this.toggleShowArchived}>
@@ -94,13 +92,29 @@ const DiscussionsItem = React.createClass({
 				: <div style={[styles.container, isArchived && styles.archived]}>
 					<div style={styles.discussionHeader}>
 
+						<div style={styles.discussionVoting}>
+							<DiscussionsScore
+								discussionID={discussionItem._id}
+								score={discussionPoints}
+								userYay={discussionItem.userYay}
+								userNay={discussionItem.userNay}
+								handleVoteSubmit={this.props.handleVoteSubmit}
+								readOnly={this.props.noReply}/>
+						</div>
+
 						<div style={styles.discussionAuthorImageWrapper}>
 							<Link to={'/user/' + discussionItem.author.username} style={globalStyles.link}>
 								<img style={styles.discussionAuthorImage} src={discussionItem.author.thumbnail} />
 							</Link>
 						</div>
 						<div style={styles.discussionDetailsLine}>
-							<Link to={'/user/' + discussionItem.author.username} style={globalStyles.link}><span key={'discussionItemAuthorLink' + discussionItem._id} style={styles.headerText}>{discussionItem.author.name}</span></Link> on {dateFormat(discussionItem.postDate, 'mm/dd/yy, h:MMTT')}
+							<Link to={'/user/' + discussionItem.author.username} style={globalStyles.link}>
+								<span key={'discussionItemAuthorLink' + discussionItem._id} style={[styles.headerText, styles.authorName]}>{discussionItem.author.name}</span>
+							</Link> <span style={styles.dot}>●</span> {
+								(((new Date() - new Date(discussionItem.postDate)) / (1000 * 60 * 60 * 24)) < 7)
+								? <FormattedRelative value={discussionItem.postDate} />
+								: <FormattedDate value={discussionItem.postDate} />
+							}
 						</div>
 
 						<div style={[styles.discussionDetailsLine, styles.discussionDetailsLineBottom]}>
@@ -132,7 +146,7 @@ const DiscussionsItem = React.createClass({
 								</span>
 								: null
 							}
-							
+
 							{isArchived
 								? <span>
 									<span style={[styles.detailLineItemSeparator, (this.props.noReply && this.props.noPermalink && !this.props.isPubAuthor) && {display: 'none'}]}>|</span>
@@ -148,15 +162,6 @@ const DiscussionsItem = React.createClass({
 					</div>
 
 					<div style={styles.discussionBody}>
-						<div style={styles.discussionVoting}>
-							<DiscussionsScore
-								discussionID={discussionItem._id}
-								score={discussionPoints}
-								userYay={discussionItem.userYay}
-								userNay={discussionItem.userNay}
-								handleVoteSubmit={this.props.handleVoteSubmit}
-								readOnly={this.props.noReply}/>
-						</div>
 
 						<div style={styles.discussionContent}>
 
@@ -191,6 +196,7 @@ const DiscussionsItem = React.createClass({
 									key={child._id}
 									slug={this.props.slug}
 									discussionItem={child}
+									isPubAuthor={this.props.isPubAuthor}
 
 									activeSaveID={this.props.activeSaveID}
 									addDiscussionHandler={this.props.addDiscussionHandler}
@@ -198,8 +204,10 @@ const DiscussionsItem = React.createClass({
 									newDiscussionData={this.props.newDiscussionData}
 									userThumbnail={this.props.userThumbnail}
 									handleVoteSubmit={this.props.handleVoteSubmit}
+									handleArchive={this.props.handleVoteSubmit}
 									noReply={this.props.noReply}
 									noPermalink={this.props.noPermalink}/>
+
 								);
 							})
 						}
@@ -218,7 +226,7 @@ styles = {
 	container: {
 		width: '100%',
 		// overflow: 'hidden',
-		margin: '10px 0px 0px 0px',
+		margin: '15px 0px 10px 0px',
 		backgroundColor: 'rgba(255,255,255,0.2)',
 	},
 	archived: {
@@ -233,11 +241,15 @@ styles = {
 		padding: '0px 10px',
 		fontSize: '12px',
 		backgroundColor: 'rgba(255,255,255,0.2)',
-		borderBottom: '1px solid #ccc',
+		borderBottom: '1px solid #eee',
 		':hover': {
 			color: '#444',
 			cursor: 'pointer',
 		},
+	},
+	authorName: {
+		/* borderBottom: '1px solid #bbb', */
+		fontWeight: 700,
 	},
 	discussionHeader: {
 		height: 36,
@@ -252,11 +264,12 @@ styles = {
 	discussionAuthorImage: {
 		width: '100%',
 		height: '100%',
+		borderRadius: '2px',
 	},
 	discussionDetailsLine: {
 		height: 18,
 		lineHeight: '16px',
-		width: 'calc(100% - 36px - 5px)',
+		width: 'calc(100% - 36px - 36px - 5px)',
 		paddingLeft: 5,
 		color: '#777',
 		fontSize: '13px',
@@ -284,32 +297,30 @@ styles = {
 	},
 	discussionDetailsLineBottom: {
 		lineHeight: '18px',
+		fontSize: '0.7em',
 	},
 	discussionBody: {
 		width: '100%',
 		position: 'relative',
-		minHeight: 82,
-		borderBottom: '1px solid #ccc',
+		borderBottom: '1px solid #eee',
 	},
 	discussionVoting: {
-		width: '36',
-		height: 72,
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		fontSize: '20px',
+		width: '25px',
+		height: '36px',
+		float: 'left',
+		fontSize: '12px',
 		textAlign: 'center',
-		padding: '5px 0px',
+		padding: '3px 0px',
 		fontFamily: 'Courier',
 		// backgroundColor: 'rgba(255,0,100,0.2)',
 	},
 	discussionContent: {
-		width: 'calc(100% - 36px - 30px)',
-		marginLeft: 36,
+		width: 'calc(100% - 30px)',
+		marginLeft: 25,
 		// overflow: 'hidden',
 		color: '#555',
 		// padding: '0px 15px',
-		padding: '10px 6px',
+		padding: '10px 6px 15px 6px',
 		lineHeight: '1.58',
 		fontSize: '0.9em',
 		fontWeight: '300',
@@ -320,6 +331,13 @@ styles = {
 		marginLeft: 20,
 		// borderLeft: '1px solid #ccc',
 		// borderTop: '1px solid #ccc',
+	},
+	dot: {
+		fontSize: '0.50em',
+		padding: '0px 3px',
+		position: 'relative',
+		top: '-2px',
+		color: '#999',
 	},
 	replyWrapper: {
 		width: 'calc(100% - 20px)',

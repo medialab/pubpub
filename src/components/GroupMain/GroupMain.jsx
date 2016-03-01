@@ -61,12 +61,12 @@ const GroupMain = React.createClass({
 						return (
 							<Link to={linkPath} style={globalStyles.link} key={'pubItemLink-' + index}>
 							<div style={styles.pubItem} key={'pubItem-' + index}>
-								<div style={styles.pubTitle}>{pub.title}</div>
-								<div style={styles.pubAuthor}>{this.authorString(pub)}</div>
+								<div>
+									<span style={styles.pubTitle}>{pub.title}</span>
+									<span style={styles.pubAuthor}>{this.authorString(pub)}</span>
+								</div>
 
-								<div></div>
-
-								<div style={styles.pubDetail}>{dateFormat(pub.lastUpdated, 'mm/dd/yy')}</div>
+								<div style={styles.pubDetail}>{dateFormat(pub.lastUpdated, 'mmm dd, yyyy')}</div>
 								<div style={styles.separator}>|</div>
 								<div style={styles.pubDetail}>{pub.discussions ? pub.discussions.length : 0} comments</div>
 
@@ -84,13 +84,13 @@ const GroupMain = React.createClass({
 											<span>Latest Comment: </span>
 											{discussionsList[discussionsList.length - 1].author.name} 
 											<span> on </span>
-											{dateFormat(discussionsList[discussionsList.length - 1].postDate, 'mm/dd/yy, h:MMTT')}
+											{dateFormat(discussionsList[discussionsList.length - 1].postDate, 'mmm dd, yyyy h:MMTT')}
 										</div>
 										<div style={styles.commentWrapper}>
 											{/* <div style={styles.commentHeader}>
 												{discussionsList[discussionsList.length - 1].author.name} 
 												<span> on </span>
-												{dateFormat(discussionsList[discussionsList.length - 1].postDate, 'mm/dd/yy, h:MMTT')}
+												{dateFormat(discussionsList[discussionsList.length - 1].postDate, ''mmm dd, yyyy', h:MMTT')}
 											</div> */}
 											<div style={styles.commentText}>
 												{discussionsList[discussionsList.length - 1].markdown.replace(/\[\[(.*)\]\]/g, '').length > 100 
@@ -147,13 +147,13 @@ styles = {
 	pubTitle: {
 		fontSize: '20px',
 		color: '#222',
-		display: 'inline-block',
+		// display: 'inline-block',
 		paddingRight: '20px',
 	},
 	pubAuthor: {
 		fontSize: '15px',
 		color: '#999',
-		display: 'inline-block',
+		// display: 'inline-block',
 	},
 	pubAbstract: {
 		fontSize: '14px',

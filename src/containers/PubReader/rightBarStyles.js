@@ -17,6 +17,9 @@ export const rightBarStyles = {
 		},
 
 	},
+	sectionSubHeaderInline: {
+		margin: '0px 0px 0px 15px',
+	},
 	sectionSubHeader: {
 		margin: '3px 0px',
 		fontSize: '14px',

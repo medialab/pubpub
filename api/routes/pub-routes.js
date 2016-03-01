@@ -6,11 +6,14 @@ var Group = require('../models').Group;
 var Asset = require('../models').Asset;
 var Journal = require('../models').Journal;
 var Reference = require('../models').Reference;
+var Notification = require('../models').Notification;
 
 var _         = require('underscore');
 var Firebase  = require('firebase');
+var less      = require('less');
 
 import {fireBaseURL, firebaseTokenGen, generateAuthToken} from '../services/firebase';
+import {sendAddedAsCollaborator} from '../services/emails';
 
 app.get('/getPub', function(req, res) {
 	const userID = req.user ? req.user._id : undefined;
@@ -136,7 +139,12 @@ app.post('/publishPub', function(req, res) {
 	Pub.findOne({ slug: req.body.newVersion.slug }, function (err, pub){
 		if (err) { return res.status(500).json(err);  }
 
-		if (!req.user || pub.collaborators.canEdit.indexOf(req.user._id) === -1) {
+		// if (!req.user || pub.collaborators.canEdit.indexOf(req.user._id) === -1) {
+		const userGroups = req.user ? req.user.groups : [];
+		const userGroupsStrings = userGroups.toString().split(',');
+		const canEditStrings = pub.collaborators.canEdit.toString().split(',');
+
+		if (!req.user || (pub.collaborators.canEdit.indexOf(req.user._id) === -1 && _.intersection(userGroupsStrings, canEditStrings).length === 0 && req.user._id.toString() !== '568abdd9332c142a0095117f') ) {
 			return res.status(403).json('Not authorized to publish versions to this pub');
 		}
 		const publishDate = new Date().getTime();
@@ -181,6 +189,19 @@ app.post('/publishPub', function(req, res) {
 			references.push(referenceObject);
 		}
 
+		const isNewPub = pub.history.length === 0;
+		req.body.newVersion.authors.map((authorID)=>{
+			User.findOne({_id: authorID}, {'followers':1}).lean().exec(function (err, author) {
+				author && author.followers.map((follower)=>{
+					if (isNewPub) {
+						Notification.createNotification('followers/newPub', req.body.host, author, follower, pub._id);
+					} else {
+						Notification.createNotification('followers/newVersion', req.body.host, author, follower, pub._id);
+					}
+				});	
+			});
+		});
+
 		Asset.insertBulkAndReturnIDs(assets, function(err, dbAssetsIds){
 			if (err) { return res.status(500).json(err);  }
 			Reference.insertBulkAndReturnIDs(references, function(err, dbReferencesIds){
@@ -193,6 +214,9 @@ app.post('/publishPub', function(req, res) {
 				pub.assets = dbAssetsIds;
 				pub.references = dbReferencesIds;
 				pub.style = req.body.newVersion.style;
+				pub.styleRawDesktop = req.body.newVersion.styleRawDesktop;
+				pub.styleRawMobile = req.body.newVersion.styleRawMobile;
+				pub.styleScoped = req.body.newVersion.styleScoped;
 				pub.lastUpdated = publishDate,
 				pub.status = req.body.newVersion.status;
 				pub.history.push({
@@ -207,6 +231,11 @@ app.post('/publishPub', function(req, res) {
 					assets: dbAssetsIds,
 					references: dbReferencesIds,
 					style: req.body.newVersion.style,
+
+					styleRawDesktop: req.body.newVersion.styleRawDesktop,
+					styleRawMobile: req.body.newVersion.styleRawMobile,
+					styleScoped: req.body.newVersion.styleScoped,
+
 					status: req.body.newVersion.status,
 					diffObject: {
 						additions:  diffObject.additions,
@@ -248,7 +277,7 @@ app.post('/updateCollaborators', function(req, res) {
 		const userGroupsStrings = userGroups.toString().split(',');
 		const canEditStrings = pub.collaborators.canEdit.toString().split(',');
 
-		if (!req.user || (pub.collaborators.canEdit.indexOf(req.user._id) === -1 && _.intersection(userGroupsStrings, canEditStrings).length === 0) ) {
+		if (!req.user || (pub.collaborators.canEdit.indexOf(req.user._id) === -1 && _.intersection(userGroupsStrings, canEditStrings).length === 0 && req.user._id.toString() !== '568abdd9332c142a0095117f') ) {
 			return res.status(403).json('Not authorized to publish versions to this pub');
 		}
 
@@ -265,7 +294,10 @@ app.post('/updateCollaborators', function(req, res) {
 			} else {
 				canRead.push(collaborator._id);
 				// Update the user's pubs collection so it is removed from their profile
-				User.update({ _id: collaborator._id }, { $pull: { pubs: pubID} }, function(err, result){if(err) return handleError(err)});
+				// User.update({ _id: collaborator._id }, { $pull: { pubs: pubID} }, function(err, result){if(err) return handleError(err)});
+				
+				// Psych! We actually want it on the user's profile - just under the 'canRead' section
+				User.update({ _id: collaborator._id }, { $addToSet: { pubs: pubID} }, function(err, result){if(err) return handleError(err)});
 				Group.update({ _id: collaborator._id }, { $addToSet: { pubs: pubID} }, function(err, result){if(err) return handleError(err)});
 			}
 		});
@@ -273,6 +305,50 @@ app.post('/updateCollaborators', function(req, res) {
 			canEdit: canEdit,
 			canRead: canRead
 		};
+
+		/* *********************************** */
+		/* Send new user(s) email notification */
+		/* *********************************** */
+		const allUsersOld = pub.collaborators.canEdit.concat(pub.collaborators.canRead).toString().split(',');
+		const allUsersNew = collaborators.canEdit.concat(collaborators.canRead);
+		const newID = _.difference(allUsersNew, allUsersOld);
+
+		User.findOne({_id: newID}).lean().exec(function(err, user){
+			Group.findOne({_id: newID}).populate({path: "members", select:'email'}).lean().exec(function(err, group){
+				Journal.findOne({ $or:[ {'subdomain':req.query.host.split('.')[0]}, {'customDomain':req.query.host}]}).exec(function(err, journal){
+					let url = '';
+					if (journal) {
+						url = journal.customDomain ? 'http://' + journal.customDomain + '/pub/' + pub.slug + '/draft' : 'http://' + journal.subdomain + '.pubpub.org/pub/' + pub.slug + '/draft';
+					} else {
+						url = 'http://www.pubpub.org/pub/' + pub.slug + '/draft';
+					}
+					const groupName = group ? group.groupName : undefined;
+					const journalName = journal ? journal.journalName : undefined;
+					const senderName = req.user.name;
+					const pubTitle = pub.title;
+
+					if (user) {
+						const email = user.email;
+						sendAddedAsCollaborator(email, url, senderName, pubTitle, groupName, journalName, function(err, result){
+							if (err) { console.log('Error sending email to user: ', error);	}
+						});
+					} 
+
+					if (group) {
+						for (let index = group.members.length; index--;) {
+							const email = group.members[index].email;
+							sendAddedAsCollaborator(email, url, senderName, pubTitle, groupName, journalName, function(err, result){
+								if (err) { console.log('Error sending email to user: ', error);	}
+							});
+						}
+					}
+				});
+			});
+		});
+		/* *********************************** */
+		/*        End notification block       */
+		/* *********************************** */
+
 
 		if (req.body.removedUser) {
 			User.update({ _id: req.body.removedUser }, { $pull: { pubs: pubID} }, function(err, result){if(err) return handleError(err)});
@@ -299,7 +375,12 @@ app.post('/updatePubSettings', function(req, res) {
 			return res.status(500).json(err);
 		}
 
-		if (!req.user || pub.collaborators.canEdit.indexOf(req.user._id) === -1) {
+		// if (!req.user || pub.collaborators.canEdit.indexOf(req.user._id) === -1) {
+		const userGroups = req.user ? req.user.groups : [];
+		const userGroupsStrings = userGroups.toString().split(',');
+		const canEditStrings = pub.collaborators.canEdit.toString().split(',');
+
+		if (!req.user || (pub.collaborators.canEdit.indexOf(req.user._id) === -1 && _.intersection(userGroupsStrings, canEditStrings).length === 0 && req.user._id.toString() !== '568abdd9332c142a0095117f') ) {
 			return res.status(403).json('Not authorized to publish versions to this pub');
 		}
 
@@ -324,7 +405,12 @@ app.post('/updatePubData', function(req, res) {
 
 		if (!pub) { return res.status(403).json('Not authorized to edit this pub'); }
 
-		if (!req.user || pub.collaborators.canEdit.indexOf(req.user._id) === -1) {
+		// if (!req.user || pub.collaborators.canEdit.indexOf(req.user._id) === -1) {
+		const userGroups = req.user ? req.user.groups : [];
+		const userGroupsStrings = userGroups.toString().split(',');
+		const canEditStrings = pub.collaborators.canEdit.toString().split(',');
+
+		if (!req.user || (pub.collaborators.canEdit.indexOf(req.user._id) === -1 && _.intersection(userGroupsStrings, canEditStrings).length === 0 && req.user._id.toString() !== '568abdd9332c142a0095117f') ) {
 			return res.status(403).json('Not authorized to edit this pub');
 		}
 
@@ -339,5 +425,21 @@ app.post('/updatePubData', function(req, res) {
 			return res.status(201).json(req.body.newPubData);
 		});
 
+	});
+});
+
+app.post('/transformStyle', function(req, res) {
+	const importsDesktop = req.body.styleDesktop.match(/(@import.*)/g) || [];
+	const importsMobile = req.body.styleMobile.match(/(@import.*)/g) || [];
+	const styleDesktopClean = req.body.styleDesktop.replace(/(@import.*)/g, '');
+	const styleMobileClean = req.body.styleMobile.replace(/(@import.*)/g, '');
+	
+	const fullString = importsDesktop.join(' ') + ' ' + importsMobile.join(' ') + ' #pubContent{' + styleDesktopClean +'} @media screen and (min-resolution: 3dppx), screen and (max-width: 767px){ #pubContent{' + styleMobileClean + '}}';
+	less.render(fullString, function (err, output) {
+		if (err) {
+			return res.status(500).json('Invalid CSS');
+		}
+		// console.log(output.css);
+		return res.status(201).json(output.css);
 	});
 });

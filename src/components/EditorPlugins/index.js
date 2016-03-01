@@ -5,6 +5,7 @@ import CitePlugin 	from './citePlugin';
 import IframePlugin 	from './iframePlugin';
 import SelectionPlugin 	from './selectionPlugin';
 import VideoReviewPlugin 	from './videoReviewPlugin';
+import FootnotePlugin 	from './footnotePlugin';
 
 export default {
 	image: ImagePlugin,
@@ -14,4 +15,5 @@ export default {
 	iframe: IframePlugin,
 	selection: SelectionPlugin,
 	videoreview: VideoReviewPlugin,
+	footnote: FootnotePlugin,
 };

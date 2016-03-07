@@ -183,13 +183,14 @@ const ActionPlayer = React.createClass({
 	},
 
 	render: function() {
+		const name = this.props.name || 'Thariq';
 		return (
 			<div>
 				<Portal portalId="actionPlayerPointer">
 					<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse(this.state.mouseX, this.state.mouseY), styles.show(this.state.playing)]}>
 						<span style={[styles.mousePointer, styles.show(!this.state.clamped)]}/>
 						<span style={styles.mouseTriangle(this.state.clamped)}/>
-						<span style={styles.mouseTooltip(this.state.clamped)}>{this.props.name} - <TimerText ref="durationTimer"/></span>
+						<span style={styles.mouseTooltip(this.state.clamped)}>{name} - <TimerText ref="durationTimer"/></span>
 					</div>
 				</Portal>
 			</div>

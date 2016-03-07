@@ -12,6 +12,7 @@ export default {
 	'align': alignField,
 	'size': sizeField,
 	'reference': referenceField,
+	'radio': baseRadioField
 	// 'size' : (radio with small, medium, large and %),
 	// 'align' : (radio with left, right and full)
 	// 'caption' : (text field)

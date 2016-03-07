@@ -1,14 +1,15 @@
-export default function(url, type, params, callback) {
-	fetch('https://stream-transform.herokuapp.com', {
+import request from 'request';
+
+export default function(url, parser, params, step, callback) {
+	const stream = parser(params, step, callback);
+	request({
+		url: url, 
+		method: 'GET', 
+		withCredentials: false,
 		headers: {
-			'Accept': 'application/json',
-			'Content-Type': 'application/json'
-		},
-		method: 'POST',
-		body: JSON.stringify({
-			url: url,
-			params: params,
-			type: type
-		})
-	}).then((res) => res.json()).then((data) => callback(data));
+			'Access-Control-Allow-Origin': '*',
+			'Access-Control-Allow-Methods': 'GET,POST',
+			'Access-Control-Allow-Headers': 'Content-Type'
+		}
+	}).pipe(stream);
 }

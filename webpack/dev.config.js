@@ -78,7 +78,7 @@ module.exports = {
   },
   module: {
     loaders: [
-					 { test: /index\.js$/, include: /.*\/src\/components\/EditorPluginsNew\/.*\/index\.js/, loader: 'promise-loader?bluebird' },
+					 { test: /index\.js$/, exclude: /node_modules/, include: /.*\/src\/components\/EditorPluginsNew\/.*\/index\.js/, loader: 'promise-loader?bluebird' },
       { test: /\.jsx?$/, exclude: /node_modules/, loaders: ['babel?' + JSON.stringify(babelLoaderQuery), 'eslint-loader']},
       { test: /\.json$/, loader: 'json-loader' },
       { test: /\.woff(\?v=\d+\.\d+\.\d+)?$/, loader: "url?limit=10000&mimetype=application/font-woff" },
@@ -87,7 +87,8 @@ module.exports = {
       { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: "file" },
       { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: "url?limit=10000&mimetype=image/svg+xml" },
       { test: webpackIsomorphicToolsPlugin.regular_expression('images'), loader: 'url-loader?limit=10240' }
-    ]
+    ],
+				noParse: /node_modules\/json-schema\/lib\/validate\.js/
   },
   progress: true,
   resolve: {
@@ -98,7 +99,9 @@ module.exports = {
     extensions: ['', '.json', '.js', '.jsx']
   },
   node: {
-    fs: "empty"
+    fs: "empty",
+				net: "empty",
+				tls: "empty"
   },
   plugins: [
     // hot reload

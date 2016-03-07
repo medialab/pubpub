@@ -1,4 +1,8 @@
 {
   "name": "pubpub-chart",
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "dependencies": {
+    "react": "^0.14.7",
+    "react-d3-basic": "^1.5.2"
+  }
 }

@@ -4,12 +4,15 @@ import createPubPubPlugin from '../PubPub';
 import Radium, {Style} from 'radium';
 import loadData from '../loadDataPlugin';
 
+const Basic = require('react-d3-basic');
+
 const ChartInputFields = [
 	{title: 'source', type: 'asset', params: {assetType: 'data'}},
 	{title: 'align', type: 'align'},
 	{title: 'size', type: 'size'},
 	{title: 'caption', type: 'text', params: {placeholder: 'Caption describing the chart'}},
-	{title: 'reference', type: 'reference'}
+	{title: 'reference', type: 'reference'},
+	{title: 'type', type: 'radio', params: {choices: ['pie', 'bar', 'line', 'scatter'], selectedValue: 'bar'}}
 ];
 
 const ChartConfig = {
@@ -29,7 +32,8 @@ const ChartPlugin = Radium(React.createClass({
 		align: React.PropTypes.oneOf(['left', 'right', 'full']),
 		caption: PropTypes.string,
 		source: PropTypes.object,
-		reference: PropTypes.object
+		reference: PropTypes.object,
+		type: PropTypes.string
 	},
 	getInitialState() {
 		return {
@@ -66,33 +70,30 @@ const ChartPlugin = Radium(React.createClass({
 		const align = this.props.align;
 		const caption = this.props.caption;
 		const reference = this.props.reference;
-
-		let height;
-		switch (this.props.size) {
-			case 'small':
-				height = 200;
-				break;
-			case 'medium':
-				height = 300;
-				break;
-			case 'large':
-				height = 400;
-				break;
-			default:
-				height = 400;
-				break;
+		
+		let Chart;
+		switch (this.props.type) {
+		case 'pie':
+			Chart = Basic.PieChart;
+			break;
+		case 'bar':
+			Chart = Basic.BarGroupChart;
+			break;
+		case 'line':
+			Chart = Basic.LineChart;
+			break;
+		case 'scatter':
+			Chart = Basic.ScatterPlot;
+			break;
 		}
 
 		return (<Media ref="media" caption={caption} size={size} align={align} reference={reference}>
-				<Style
-					scopeSelector=".griddle"
-					rules={{
-					table: {
-						display: 'block',
-						overflowX: 'auto'
-					}
-				}} />
 				{this.state.url}
+				<Chart 
+					data={this.state.data}
+					margins={{left: 16, right: 16, top: 16, bottom: 16}}
+					
+				/>
 			</Media>
 		);
 	}

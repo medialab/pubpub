@@ -1,0 +1,7 @@
+{
+  "name": "csv-parser",
+  "version": "0.0.1",
+  "dependencies": {
+    "csv-parse": "^1.0.2"
+  }
+}

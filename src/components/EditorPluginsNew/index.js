@@ -8,9 +8,9 @@ const plugins = {
 
 const includePlugins = {
 	image: true,
-	quote: true,
-	video: true,
-	cite: true,
+	quote: false,
+	video: false,
+	cite: false,
 	table: true
 };
 

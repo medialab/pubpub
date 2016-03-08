@@ -40,6 +40,72 @@ const SelectionPlugin = React.createClass({
 		};
 	},
 
+	drawMarkdownComment(selection) {
+
+
+		const cm = document.getElementsByClassName('CodeMirror')[0].CodeMirror;
+
+
+		const selectorString = selection.startContainerPath.slice(0, -7);
+		const selectionElem = document.querySelector(selectorString);
+		const startLine 	= parseInt(selectionElem.getAttribute('data-start-map'));
+		const endLine 		= parseInt(selectionElem.getAttribute('data-end-map'));
+
+		console.log('DRAWING THIS', startLine, endLine);
+
+		const msg = document.createElement('div');
+		const icon = msg.appendChild(document.createElement('span'));
+		icon.innerHTML = selection.text;
+		icon.className = 'lint-error-icon';
+		icon.style.backgroundColor = 'green';
+		icon.style.color = 'white';
+
+		msg.appendChild(document.createTextNode('This is a comment!'));
+		msg.className = 'lint-error';
+		msg.style.zIndex = '10000';
+		msg.style.width = '200px';
+		msg.style.height = '50px';
+
+		function charPos(str, char) {
+		  return str
+		         .split("")
+		         .map(function (c, i) { if (c == char) return i; })
+		         .filter(function (v) { return v >= 0; });
+		}
+
+
+		const cmString = cm.getValue();
+		const lineIndexes = charPos(cmString, '\n');
+		const startChar = lineIndexes[endLine + 1];
+
+		console.log(startChar);
+
+		const count = cm.lineCount();
+		let charCount = 0;
+		let i;
+		for (i = 0; i < count; i++) {
+			const line = cm.getLine(i + 1);
+			if (line) {
+				if (charCount > startChar) {
+					console.log(line);
+					break;
+				}
+				charCount += line.length;
+			}
+		}
+
+		debugger;
+
+		console.log(charCount);
+		console.log(i);
+
+		// cm.addLineWidget(startLine, msg);
+		cm.addWidget({line: i + 1, ch: 0}, msg);
+		// console.log(cm);
+		// console.log(msg);
+		// debugger;
+	},
+
 	drawHighlight: function() {
 		const selection = this.props.index;
 		try {
@@ -49,6 +115,8 @@ const SelectionPlugin = React.createClass({
 				startOffset: selection.startOffset,
 				endOffset: selection.endOffset,
 			};
+
+			this.drawMarkdownComment(selection);
 
 			const version = parseInt(selection.version, 10);
 			const classname = version ? 'selection' : 'selection selection-editor';
@@ -137,7 +205,7 @@ const SelectionPlugin = React.createClass({
 			} catch (err) {
 				return [null, null];
 			}
-			
+
 		}
 
 		// If the contextString matches, return our original offsets

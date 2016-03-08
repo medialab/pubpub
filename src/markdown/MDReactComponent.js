@@ -81,6 +81,9 @@ const DEFAULT_RULES = {
     if (token.info) {
       attrs = assign({}, attrs, { 'data-info': token.info.trim() });
     }
+    if (token.map) {
+      attrs = assign({}, attrs, { 'data-start-map': token.map[0], 'data-end-map': token.map[1] });
+    }
     /* plugin-related */
     return [compact([token.tag, attrs].concat((token.nesting === 1) && getNext()))];
   }
@@ -168,7 +171,7 @@ function mdReactFactory(options={}) {
       React.createElement(tag, props, children);
   }
 
-  return function(text) {
+  return function(text, saveGlobals) {
     const tree = convertTree(md.parse(text, {}), convertRules, md.options);
     return iterateTree(tree);
   };

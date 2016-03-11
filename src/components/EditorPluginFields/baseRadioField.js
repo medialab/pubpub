@@ -8,6 +8,7 @@ const RadioButtonProp = React.createClass({
 	propTypes: {
 		choices: PropTypes.array,
 		selectedValue: React.PropTypes.oneOfType([React.PropTypes.string, React.PropTypes.number]),
+		saveChange: PropTypes.func,
 	},
 	getInitialState: function() {
 		const state = {};
@@ -27,6 +28,7 @@ const RadioButtonProp = React.createClass({
 		this.setState({
 			selectedValue: 'number'
 		});
+		this.props.saveChange();
 	},
 	handleNumber: function(event) {
 		let val = event.target.value;
@@ -37,11 +39,13 @@ const RadioButtonProp = React.createClass({
 			selectedValue: 'number',
 			number: val
 		});
+		this.props.saveChange();
 	},
 	handleChange: function(prop) {
 		this.setState({
 			selectedValue: prop
 		});
+		this.props.saveChange();
 	},
 	value: function() {
 		return (this.state.selectedValue === 'number') ? this.state.number : this.state.selectedValue;
@@ -87,6 +91,8 @@ styles = {
 		borderLeft: 'none',
 		borderRight: 'none',
 		borderBottom: 'gainsboro solid 1px',
+		outline: 'none',
+		backgroundColor: 'whitesmoke',
 	}
 };
 

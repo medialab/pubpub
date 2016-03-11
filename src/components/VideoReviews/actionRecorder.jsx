@@ -15,6 +15,7 @@ const VideoReviews = React.createClass({
 	getInitialState: function() {
 		this.actions = [];
 		this.selected = lodash.debounce(this._selected, 25);
+		this.lastPaint = null;
 
 		return {
 			recording: false,
@@ -72,6 +73,48 @@ const VideoReviews = React.createClass({
 		this.actions.push(mouse);
 	},
 
+	pressMouse: function(evt) {
+		const paint = {};
+
+		const boundingRect = document.getElementById('pubContent').getBoundingClientRect();
+
+		const leftOffset = boundingRect.left;
+		const topOffset = boundingRect.top;
+
+		const docWidth = boundingRect.width;
+		const docHeight = boundingRect.height;
+
+		const percentX = (evt.pageX - leftOffset) / docWidth;
+		const percentY = (evt.pageY - topOffset) / docHeight;
+
+		// console.log('Got scrolling!', percentX, percentY);
+
+		paint.pos = {x: percentX, y: percentY};
+		paint.type = 'paint';
+
+		const paintX = (percentX * docWidth) + leftOffset;
+		const paintY = (percentY * docHeight) + topOffset;
+
+		const startPos = (this.lastPaint) ? this.lastPaint : paint;
+		const startX = (startPos.x * docWidth) + leftOffset;
+		const startY = (startPos.y * docHeight) + topOffset;
+
+		var c = document.getElementById("drawCanvas");
+		var ctx = c.getContext("2d");
+		ctx.beginPath();
+		ctx.moveTo(startX,startY);
+		ctx.lineTo(paintX,paintY);
+		ctx.stroke();
+
+		this.lastPaint = paint;
+
+		// this.mouseElem.style.left = (evt.pageX ) + 'px';
+		// this.mouseElem.style.top = (evt.pageY) + 'px';
+
+		paint.time = new Date().getTime() - this.startRecordingDate;
+		this.actions.push(paint);
+	},
+
 	scroll: function(evt) {
 		const scroll = {};
 		scroll.pos = document.querySelector('.centerBar').scrollTop;
@@ -125,6 +168,8 @@ const VideoReviews = React.createClass({
 			document.removeEventListener('selectionchange', this.selected);
 			document.querySelector('.centerBar').removeEventListener('scroll', this.scroll);
 			document.getElementById('pubContent').removeEventListener('mousemove', this.mouse);
+			document.getElementById('pubContent').removeEventListener('mousedown', this.pressMouse);
+
 			if (this.counterInterval) clearInterval(this.counterInterval);
 		}
 	},
@@ -135,6 +180,8 @@ const VideoReviews = React.createClass({
 		document.addEventListener('selectionchange', self.selected);
 		document.querySelector('.centerBar').addEventListener('scroll', self.scroll);
 		document.getElementById('pubContent').addEventListener('mousemove', self.mouse);
+		document.getElementById('pubContent').addEventListener('mousedown', self.pressMouse);
+
 		self.startRecordingDate = new Date().getTime();
 		self.actions = [];
 		self.scroll();
@@ -167,12 +214,19 @@ const VideoReviews = React.createClass({
 	render: function() {
 
 		return (
+
+			<div>
+			<canvas style={styles.canvas} id="drawCanvas">
+				Your browser does not support the HTML5 canvas tag.
+			</canvas>
+
 			<Portal portalId="actionRecorderPointer">
 				<div ref={(ref) => this.mouseElem = ref} style={[styles.mouse, styles.show(this.state.recording)]}>
 					<span style={styles.mouseTriangle}/>
 					<span style={styles.mouseTooltip}>{`Recording (${hhmmss(this.state.seconds)})`}</span>
 				</div>
 			</Portal>
+			</div>
 		);
 	}
 });
@@ -186,6 +240,13 @@ styles = {
 			cameraStyle.display = 'none';
 		}
 		return cameraStyle;
+	},
+	canvas: {
+		position: 'absolute',
+		top: '0px',
+		left: '0px',
+		width: '100vw',
+		height: '100vh',
 	},
 	mouse: {
 		position: 'absolute',

@@ -7,7 +7,7 @@ let styles = {};
 
 const CiteInputFields = [
 	{title: 'reference', type: 'reference'},
-	{title: 'description', type: 'text', params: {placeholder: 'Caption talking about the reference.'}},
+	{title: 'description', type: 'textArea', params: {placeholder: 'Caption talking about the reference.'}},
 ];
 
 const CiteConfig = {
@@ -35,6 +35,9 @@ const CiteConfig = {
 		return {globals, pluginProps};
 	}
 };
+
+const CITE_WRAPPER_CLASS = 'pub-cite-wrapper';
+const CITE_CLASS = 'pub-cite';
 
 // let styles =
 
@@ -83,9 +86,9 @@ const CitePlugin = React.createClass({
 			<span>
 				{this.props.error === 'type'
 					? <ErrorMsg>Could not find reference.</ErrorMsg>
-					: <span style={[styles.ref]} onMouseOver={this.mouseOver} onMouseOut={this.mouseOut}>
+				: <span className={CITE_WRAPPER_CLASS} style={[styles.ref]} onMouseOver={this.mouseOver} onMouseOut={this.mouseOut}>
 						[{count}]
-						<span style={[styles.hoverRef, this.state.hover && styles.hoverRefVisible]}>
+						<span className={CITE_CLASS} style={[styles.hoverRef, this.state.hover && styles.hoverRefVisible]}>
 							<Reference citationObject={this.props.reference} mode={'mla'} />
 						</span>
 

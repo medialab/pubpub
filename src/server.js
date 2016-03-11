@@ -111,14 +111,14 @@ app.use((req, res) => {
 
 				const htmltest = ReactDOM.renderToString(
 					<Html radiumConfig={{userAgent: req.headers['user-agent']}} component={component} />
-				)
+				);
 				const mainBundle = webpackIsomorphicTools.assets().javascript.main;
 				const head = Helmet.rewind();
 				
 				let dynamicStyle;
 				const pathname = store.getState().router.location.pathname;
 				
-				if (pathname.substring(0,5) === '/pub/' && pathname.substring(pathname.length-6, pathname.length) !== '/draft') {
+				if (pathname.substring(0, 5) === '/pub/' && pathname.substring(pathname.length - 6, pathname.length) !== '/draft' && store.getState().pub.getIn(['pubData', 'history'])) {
 					// source = store.getState().pub.getIn(['pubData', 'history']);
 					const versionIndex = store.getState().router.location.query.version !== undefined && store.getState().router.location.query.version > 0 && store.getState().router.location.query.version <= (store.getState().pub.getIn(['pubData', 'history']).size - 1)
 						? store.getState().router.location.query.version - 1
@@ -142,6 +142,8 @@ app.use((req, res) => {
 							<link rel=${rssRel} type="application/rss+xml" title="RSS" href="/data/rss.xml" />
 							<link rel="shortcut icon" href="/favicon.ico" />
 							<link href='https://fonts.googleapis.com/css?family=Lato:300,300italic,700,700italic,900italic|Lora:400,400italic,700,700italic' rel='stylesheet' type='text/css' />
+
+							<link href='https://fonts.googleapis.com/css?family=Alegreya+Sans+SC|ABeeZee' rel='stylesheet' type='text/css'>
 
 							<!-- We could dynamically load these in Editor.jsx
 							<!-- If we have to load more local css - we should bundle it all into one minified file and load it here. -->
@@ -184,7 +186,7 @@ app.use((req, res) => {
 							<script src=${mainBundle}></script>
 						</body>
 					</html>
-					`)
+					`);
 
 			}).catch((err) => {
 				console.error('DATA FETCHING ERROR:', pretty.render(err));

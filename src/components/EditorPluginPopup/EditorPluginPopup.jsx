@@ -2,19 +2,19 @@ import React, {PropTypes} from 'react';
 import Radium from 'radium';
 import {parsePluginString} from '../../utils/parsePlugins';
 
-import {globalMessages} from '../../utils/globalMessages';
-
-import {FormattedMessage} from 'react-intl';
+// import {globalMessages} from '../../utils/globalMessages';
+// import {FormattedMessage} from 'react-intl';
 
 import Plugins from '../../components/EditorPlugins/index.js';
 import InputFields from '../EditorPluginFields/index.js';
 import MurmurHash from 'murmurhash';
 import Portal from 'react-portal';
+import {throttle, delay} from 'lodash';
 
 
 let styles = {};
 const POPUP_WIDTH = 425;
-const POPUP_HEIGHT_ESTIMATE = 350;
+// const POPUP_HEIGHT_ESTIMATE = 350;
 
 const EditorPluginPopup = React.createClass({
 	propTypes: {
@@ -35,12 +35,15 @@ const EditorPluginPopup = React.createClass({
 
 	getInitialState() {
 		this.popupInputFields = {};
+		this.fromIndex = null;
+		this.toIndex = null;
+		this.onInputFieldChange = throttle(this._onInputFieldChange, 250);
 		return {
 			popupVisible: false,
-			xLoc: 0,
-			yLoc: 0,
 			initialString: '',
 			activeLine: undefined,
+			activeChar: undefined,
+			activeToken: null,
 			pluginType: '',
 			assets: [],
 			references: [],
@@ -70,32 +73,21 @@ const EditorPluginPopup = React.createClass({
 			return null;
 		}
 
+		// If the change comes from another user
+		if (this.props.codeMirrorChange !== nextProps.codeMirrorChange
+			&& this.state.popupVisible === true
+			&& nextProps.codeMirrorChange.origin
+			&& (nextProps.codeMirrorChange.origin.indexOf('cmrt-') !== -1 || nextProps.codeMirrorChange.origin === 'RTCMADAPTER')) {
+			this.updateToken({activeLine: this.state.activeLine, activeChar: this.state.activeChar, isUpdate: true});
+		}
+
 		const assets = (nextProps.assets) ? Object.values(nextProps.assets) : [];
 		const references = (nextProps.references) ? Object.values(nextProps.references) : [];
 		const selections = (nextProps.selections) ? Object.values(nextProps.selections) : [];
 
 		this.setState({assets: assets, references: references, aselections: selections});
 
-		const change = nextProps.codeMirrorChange;
-
-		// If the content changes and the popup is visible, it will be out of date, so hide it.
-		// Well, we don't want it to close if ANY change is made, only a change to the same line
-		// If the from to to line of the change equal the line of the popup, close it.
-		if (this.state.activeLine !== undefined && this.state.activeLine >= change.from.line && this.state.activeLine <= change.to.line && change.origin !== 'complete') {
-			this.setState({
-				popupVisible: false,
-				activeLine: undefined,
-			});
-		}
-
-		// If the change causes the line above to change, change the activeLine
-		if (this.state.activeLine !== undefined && change.from.line < this.state.activeLine) {
-
-			this.setState({
-				activeLine: this.state.activeLine + change.text.length - change.removed.length,
-			});
-
-		}
+		return true;
 	},
 
 	componentWillUnmount() {
@@ -138,81 +130,91 @@ const EditorPluginPopup = React.createClass({
 		this.showAtPos(clickX, clickY);
 	},
 
+
 	showAtPos: function(clickX, clickY) {
 
+
 		const target = document.elementFromPoint(clickX, clickY);
-		const contentBody = document.getElementById('editor-text-wrapper');
+		// const contentBody = document.getElementById('editor-text-wrapper');
 
 		if (target && target.className.indexOf('cm-plugin') > -1) {
+
+			this.fromIndex = null;
+			this.toIndex = null;
+
 			const cm = this.getActiveCodemirrorInstance();
+			this.cm = cm;
 
 			const selectedLine = cm.coordsChar({left: clickX, top: clickY, mode: 'window'});
 			const activeChar = selectedLine.ch;
 			const activeLine = selectedLine.line;
-			let activeToken = null;
 
-			const selectedTokens = cm.getLineTokens(selectedLine.line);
-			for (const token of selectedTokens) {
-				if (token.start <= activeChar && activeChar <= token.end) {
-					activeToken = token;
-				}
-			}
-
-			if (!activeToken) {
-				console.error('Could not find the active token!');
-				return;
-			}
-
-
-			// const pluginString = target.parentElement.textContent.slice(2, -2); // Original string minus the brackets
-			// const pluginString = target.innerHTML.slice(2, -2); // Original string minus the brackets
-
-			const pluginString = activeToken.string.slice(2, -2);
-
-			const pluginSplit = pluginString.split(':');
-			const pluginType = pluginSplit[0];
-			const valueString = pluginSplit.length > 1 ? pluginSplit[1] : ''; // Values split into an array
-			const values = parsePluginString(valueString);
-
-			const edgeX = document.elementFromPoint(clickX + POPUP_WIDTH, clickY);
-			const edgeY = document.elementFromPoint(clickX, clickY + POPUP_HEIGHT_ESTIMATE);
-
-			const flippedX = !contentBody.contains(edgeX);
-			const flippedY = !(edgeY !== null);
-
-			const xLoc = (flippedX) ? clickX - POPUP_WIDTH + 22 : clickX - 22;
-			const yLoc = (flippedY) ? (window.innerHeight - clickY) - contentBody.scrollTop + 15 : clickY + 15 - 60 + contentBody.scrollTop;
-
-			this.setState({
-				popupVisible: true,
-				xLoc: xLoc,
-				yLoc: yLoc,
-				activeLine: activeLine,
-				activeToken: activeToken,
-				pluginType: pluginType,
-				pluginHash: MurmurHash.v2(valueString),
-				initialString: pluginString,
-				values: values,
-				flippedX: flippedX,
-				flippedY: flippedY
-			});
-
+			this.updateToken({activeLine, activeChar, isUpdate: false});
 			this.focusFields();
 
 		}
 	},
 
+	updateToken: function({activeChar, activeLine, isUpdate}) {
+
+
+		const lastToken = (isUpdate) ? this.state.activeToken : null;
+		let activeToken = null;
+
+		const selectedTokens = this.cm.getLineTokens(activeLine);
+		for (const token of selectedTokens) {
+			if (token.start <= activeChar && activeChar <= token.end) {
+				activeToken = token;
+			}
+		}
+
+		const tokenChanged = (isUpdate && activeToken && lastToken && activeToken.type !== lastToken.type);
+
+		if (!activeToken || tokenChanged) {
+			this.setState({
+				popupVisible: false,
+				activeToken: null,
+				pluginHash: null,
+			});
+			return;
+		}
+
+		const pluginString = activeToken.string.slice(2, -2);
+		const pluginSplit = pluginString.split(':');
+		const pluginType = pluginSplit[0];
+		const valueString = pluginSplit.length > 1 ? pluginSplit[1] : ''; // Values split into an array
+		const values = parsePluginString(valueString);
+
+		this.setState({
+			popupVisible: true,
+			activeLine: activeLine,
+			activeChar: activeChar,
+			activeToken: activeToken,
+			pluginType: pluginType,
+			pluginHash: MurmurHash.v2(valueString),
+			initialString: pluginString,
+			values: values,
+		});
+
+		this.fromIndex = activeToken.start;
+		this.toIndex = activeToken.end;
+
+	},
 	onPluginSave: function() {
 		const cm = this.getActiveCodemirrorInstance();
 		const lineNum = this.state.activeLine;
 		// const from = {line: lineNum, ch: 0};
 		// const to = {line: lineNum, ch: lineContent.length};
-		const from = {line: lineNum, ch: this.state.activeToken.start};
-		const to = {line: lineNum, ch: this.state.activeToken.end};
+		const from = {line: lineNum, ch: this.fromIndex};
+		const to = {line: lineNum, ch: this.toIndex};
 
 		const mergedString = `[[${this.createPluginString(this.state.pluginType)}]]`;
+
 		// const outputString = lineContent.replace(this.state.initialString, mergedString);
+
 		cm.replaceRange(mergedString, from, to); // Since the popup closes on change, this will close the pluginPopup
+
+		this.toIndex = this.fromIndex + mergedString.length;
 	},
 
 	createPluginString: function(pluginType) {
@@ -237,6 +239,10 @@ const EditorPluginPopup = React.createClass({
 		return mergedString;
 	},
 
+	_onInputFieldChange: function() {
+		delay(this.onPluginSave, 50);
+	},
+
 	closePopup: function() {
 		this.setState({popupVisible: false});
 	},
@@ -254,6 +260,7 @@ const EditorPluginPopup = React.createClass({
 							style={[styles.pluginPopup(this.props.isLivePreview), this.state.popupVisible && styles.pluginPopupVisible]}
 						>
 						<div key={this.state.pluginHash} style={styles.pluginContent}>
+							<div style={styles.pluginClose} onClick={this.closePopup}>×</div>
 							<div style={styles.pluginPopupTitle}>
 								{this.state.pluginType}</div>
 								{
@@ -267,15 +274,24 @@ const EditorPluginPopup = React.createClass({
 											return (<div key={'pluginVal-' + fieldTitle + this.state.pluginType} style={styles.pluginOptionWrapper}>
 																<label htmlFor={fieldType} style={styles.pluginOptionLabel}>{fieldTitle}</label>
 																<div style={styles.pluginPropWrapper}>
-																	<FieldComponent selectedValue={value} references={this.state.references} assets={this.state.assets} selections={this.state.selections} {...PluginInputFieldParams} ref={(ref) => this.popupInputFields[fieldTitle] = ref}/>
+																	<FieldComponent
+																		selectedValue={value}
+																		references={this.state.references}
+																		assets={this.state.assets}
+																		selections={this.state.selections}
+																		saveChange={this.onInputFieldChange}
+																		{...PluginInputFieldParams}
+																		ref={(ref) => this.popupInputFields[fieldTitle] = ref}/>
 																</div>
 																<div style={styles.clearfix}></div>
 															</div>);
 										})
 								}
+							{/*
 							<div style={styles.pluginSave} key={'pluginPopupSave'} onClick={this.onPluginSave}>
 								<FormattedMessage {...globalMessages.save} />
 							</div>
+							*/}
 						</div>
 					</div>
 				</div>
@@ -289,11 +305,19 @@ export default Radium(EditorPluginPopup);
 
 
 styles = {
+	pluginClose: {
+		position: 'absolute',
+		right: '-25px',
+		top: '0px',
+		cursor: 'pointer',
+		fontSize: '1.25em',
+		userSelect: 'none',
+	},
 	pluginFlexBox: function(isLivePreview) {
 		return {
 			position: 'fixed',
 			left: '0vw',
-			top: '0vh',
+			top: '60px',
 			// display: 'flex',
 			// alignItems: 'center',
 			height: '100vh',
@@ -383,7 +407,9 @@ styles = {
 		marginRight: '20px',
 		width: '20%',
 		textTransform: 'capitalize',
-		fontSize: '0.95em'
+		fontSize: '0.95em',
+		verticalAlign: 'top',
+		paddingTop: '3px',
 	},
 	pluginOptionInput: {
 		width: 'calc(50% - 4px)',

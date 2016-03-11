@@ -43,6 +43,7 @@ const PubDiscussionsInput = React.createClass({
 			content: '',
 			selections: {},
 			showPreview: false,
+			showPreviewText: false,
 		};
 	},
 
@@ -81,6 +82,10 @@ const PubDiscussionsInput = React.createClass({
 			const cm = document.getElementById(this.props.codeMirrorID).childNodes[0].CodeMirror;
 			const spacing = cm.getValue().length ? ' ' : '';
 			cm.setValue(cm.getValue() + spacing + '[[selection: index=' + nextProps.newDiscussionData.get('selections').size + ']] ' );
+			cm.setCursor(cm.lineCount(), 0);
+			// setTimeout(() => {cm.focus();}, 200);
+			cm.focus();
+			// cm.focus();
 		}
 
 		const newSelections = nextProps.newDiscussionData && nextProps.newDiscussionData.get ? nextProps.newDiscussionData.get('selections').toArray() : [];
@@ -92,13 +97,14 @@ const PubDiscussionsInput = React.createClass({
 
 	onEditorChange: function(cm, change) {
 		const content = cm.getValue();
-		const showPreview = (content.indexOf('[[selection:') !== -1);
-		this.setState({content: content, showPreview: showPreview});
+		const showPreview = (this.state.showPreview || content.indexOf('[[selection:') !== -1);
+		this.setState({content: content, showPreview: showPreview, expanded: this.state.expanded || showPreview, showPreviewText: true});
 		// console.log('change!');
 		// console.log(cm);
 	},
 
 	startVideoReview: function() {
+		console.log('Start video review!');
 		if (!this.state.videoRecording) {
 			this.setState({videoRecording: true});
 		}
@@ -138,6 +144,10 @@ const PubDiscussionsInput = React.createClass({
 		}
 	},
 
+	toggleLivePreview: function() {
+		this.setState({showPreview: !this.state.showPreview});
+	},
+
 	render: function() {
 
 		return (
@@ -148,7 +158,7 @@ const PubDiscussionsInput = React.createClass({
 						...codeMirrorStyles(),
 						backgroundColor: 'transparent',
 						fontSize: '15px',
-						color: '#555',
+						color: '#222',
 						fontFamily: 'Helvetica Neue,Helvetica,Arial,sans-serif',
 						padding: '0px 20px',
 						width: 'calc(100% - 40px)',
@@ -181,30 +191,37 @@ const PubDiscussionsInput = React.createClass({
 					</div> */}
 				</div>
 				<div id={this.props.codeMirrorID} className={'inputCodeMirror'} style={styles.inputBox(this.state.expanded)} onBlur={this.onBlur} onFocus={this.onFocus}></div>
+
+				<div style={styles.loaderContainer}>
+					{(this.props.addDiscussionStatus === 'loading' && this.props.activeSaveID === this.props.saveID ? <LoaderIndeterminate color="#444"/> : null)}
+				</div>
+
+				<div style={[styles.inputBottomLine, styles.expanded(this.state.expanded || this.props.isReply, false)]}>
+
+					<div style={styles.videoButton} key={'videoSubmit'} onClick={this.startVideoReview}>
+						📹 Record Video Comment
+						{(this.state.videoRecording) ? <VideoReviews onSave={this.receiveVideoReview}/> : null}
+					</div>
+
+					{
+						(this.state.showPreviewText) ?
+					<span style={styles.livePreviewText}>Live Preview: <span style={styles.livePreviewToggle} onClick={this.toggleLivePreview}>{(this.state.showPreview) ? 'On' : 'Off'}</span> <span style={styles.lighterText}>(you can use <a target="_blank" href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet">markdown</a> for styling)</span></span>
+					: null
+					}
+					<div style={styles.submitButton} key={'newDiscussionSubmit'} onClick={this.submitDiscussion}>
+						<FormattedMessage {...globalMessages.Submit}/>
+					</div>
+				</div>
+
 				{
 					(this.state.showPreview) ?
 					<div>
-						<span style={styles.livePreviewText}>Live Preview: <small>(you can use <a target="_blank" href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet">markdown</a> to style your comment)</small></span>
 						<div style={styles.livePreviewBox}>
 							<PPMComponent assets={{}} references={{}} selections={this.state.selections} markdown={this.state.content} />
 						</div>
 					</div>
 					: null
 				}
-				<div style={styles.loaderContainer}>
-					{(this.props.addDiscussionStatus === 'loading' && this.props.activeSaveID === this.props.saveID ? <LoaderIndeterminate color="#444"/> : null)}
-				</div>
-
-				<div style={[styles.inputBottomLine, styles.expanded(this.state.expanded || this.props.isReply, false)]}>
-					<div style={styles.videoButton} key={'videoSubmit'} onClick={this.startVideoReview}>
-						📹 Record Video Comment
-						{(this.state.videoRecording) ? <VideoReviews onSave={this.receiveVideoReview}/> : null}
-					</div>
-
-					<div style={styles.submitButton} key={'newDiscussionSubmit'} onClick={this.submitDiscussion}>
-						<FormattedMessage {...globalMessages.Submit}/>
-					</div>
-				</div>
 
 			</div>
 		);
@@ -240,14 +257,27 @@ styles = {
 	},
 	livePreviewText: {
 		fontSize: '0.8em',
-		fontWeight: '700',
+		fontWeight: '400',
+		userSelect: 'none',
+		cursor: 'default',
+		marginLeft: '2.5%',
+	},
+	lighterText: {
+		fontWeight: '300',
+	},
+	livePreviewToggle: {
+		textDecoration: 'underline',
+		cursor: 'pointer',
 	},
 	livePreviewBox: {
-		width: '95%',
+		width: '90%',
 		display: 'block',
 		margin: '5px auto 15px',
-		border: '1px solid #E2E2E2',
+		border: '1px dashed #888',
 		padding: '10px',
+		fontFamily: 'Helvetica Neue,Helvetica,Arial,sans-serif',
+		color: '#555',
+		fontSize: '0.85em',
 	},
 	replyContainer: {
 		// margin: '0px 10px 10px 0px',
@@ -259,6 +289,7 @@ styles = {
 	inputBottomLine: {
 		// backgroundColor: 'rgba(255,0,100,0.1)',
 		height: 20,
+		marginBottom: '15px',
 	},
 	inputBox: function(expanded) {
 		return {

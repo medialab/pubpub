@@ -1,6 +1,6 @@
 import React, {PropTypes} from 'react';
 import {connect} from 'react-redux';
-import Radium from 'radium';
+import Radium, {Style} from 'radium';
 // import {globalStyles} from '../../utils/styleConstants';
 import {rightBarStyles} from '../../containers/PubReader/rightBarStyles';
 import DiscussionsItem from './DiscussionsItem';
@@ -10,6 +10,8 @@ import {toggleVisibility} from '../../actions/login';
 import {addDiscussion, discussionVoteSubmit, togglePubHighlights, archiveDiscussion} from '../../actions/pub';
 import {discussionVoteSubmit as discussionVoteSubmitEditor, archiveComment} from '../../actions/editor';
 import {addComment} from '../../actions/editor';
+
+import {wilsonScore as hotScore} from 'decay';
 
 // import {globalMessages} from '../../utils/globalMessages';
 // import {FormattedMessage} from 'react-intl';
@@ -138,18 +140,37 @@ const Discussions = React.createClass({
 		}
 	},
 
+	getHotness: function(discussion) {
+
+		let points = (discussion.points) ? discussion.points : 0;
+		points = Math.max(points, 0);
+		const timestamp = (discussion.postDate) ? new Date(discussion.postDate) : new Date();
+
+		return hotScore(points, 0, timestamp);
+	},
+
 	render: function() {
 		// const pubData = {discussions: []};
 
 		const discussionsData = this.getDiscussionData();
+
 
 		const addDiscussionStatus = this.props.inEditor ? this.props.editorData.get('addDiscussionStatus') : this.props.pubData.get('addDiscussionStatus');
 		const newDiscussionData = this.props.inEditor ? this.props.editorData.get('newDiscussionData') : this.props.pubData.get('newDiscussionData');
 		const activeSaveID = this.props.inEditor ? this.props.editorData.get('activeSaveID') : this.props.pubData.get('activeSaveID');
 		const isPubAuthor = this.props.inEditor ? !this.props.editorData.getIn(['pubEditData', 'isReader']) : this.props.pubData.getIn(['pubData', 'isAuthor']);
 
+		discussionsData.sort(function(a, b) { return this.getHotness(b) - this.getHotness(a); }.bind(this));
+
 		return (
 			<div style={styles.container}>
+
+
+				<Style rules={{
+					'.pub-discussions-wrapper .p-block': {
+						padding: '0.5em 0em',
+					}
+				}} />
 
 				<div className="pub-discussions-wrapper" style={rightBarStyles.sectionWrapper}>
 					{this.props.pubData.getIn(['pubData', 'referrer', 'name'])
@@ -173,29 +194,31 @@ const Discussions = React.createClass({
 					{
 						discussionsData.map((discussion)=>{
 							// console.log(discussion);
-							return (<DiscussionsItem
-								key={discussion._id}
-								slug={this.props.slug}
-								discussionItem={discussion}
-								instanceName={this.props.instanceName}
-								isPubAuthor={isPubAuthor}
+							return (discussion
+								? <DiscussionsItem
+									key={discussion._id}
+									slug={this.props.slug}
+									discussionItem={discussion}
+									instanceName={this.props.instanceName}
+									isPubAuthor={isPubAuthor}
 
-								activeSaveID={activeSaveID}
-								addDiscussionHandler={this.addDiscussion}
-								addDiscussionStatus={addDiscussionStatus}
-								newDiscussionData={newDiscussionData}
-								userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])}
-								handleVoteSubmit={this.discussionVoteSubmit}
-								handleArchive={this.archiveDiscussion}
-								noReply={!this.props.editorCommentMode && this.props.inEditor}
-								noPermalink={this.props.editorCommentMode}/>
+									activeSaveID={activeSaveID}
+									addDiscussionHandler={this.addDiscussion}
+									addDiscussionStatus={addDiscussionStatus}
+									newDiscussionData={newDiscussionData}
+									userThumbnail={this.props.loginData.getIn(['userData', 'thumbnail'])}
+									handleVoteSubmit={this.discussionVoteSubmit}
+									handleArchive={this.archiveDiscussion}
+									noReply={!this.props.editorCommentMode && this.props.inEditor}
+									noPermalink={this.props.editorCommentMode}/>
+								: <div style={styles.emptyContainer}>No Dicussion Found</div>
 							);
 						})
 					}
 
 					{(discussionsData.length === 0) ?
 						<div style={styles.emptyComments}>
-							<div>There are no comments here yet.</div> 
+							<div>There are no comments here yet.</div>
 							<div>Be the first to start the discussion!</div>
 						</div>
 					: null }
@@ -229,6 +252,11 @@ styles = {
 		margin: '40% 6% 0px 3%',
 		fontSize: '1.2em',
 		textAlign: 'center',
-		height: '70vh',
+		height: '40vh',
+	},
+	emptyContainer: {
+		margin: '10px auto',
+		fontFamily: 'Courier',
+		textAlign: 'center',
 	},
 };

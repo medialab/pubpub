@@ -33,9 +33,22 @@ git push heroku master
 heroku ps:scale web=1
 ```
 
+# Docs
+- [All docs](/docs)
+- [API](/docs/api)
 
 
+# Testing
+Tests run using Mocha and Karma. All test files follow the pattern `filename.test.js`.
 
+To run tests:
 
+```
+npm install
+npm run test        # test client and server code with mocha
+npm run test-karma  # test client code with karma (real browsers)
+```
+
+[More on tests](/tests)
 
 

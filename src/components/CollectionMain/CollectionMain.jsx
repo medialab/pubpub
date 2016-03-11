@@ -7,22 +7,23 @@ import {FormattedMessage} from 'react-intl';
 
 let styles = {};
 
-const CollectionMain = React.createClass({
+export const CollectionMain = React.createClass({
 	propTypes: {
 		collectionData: PropTypes.object,
 	},
 
 	getDefaultProps: function() {
-		
+
 	},
 
 	render: function() {
+		const collectionPubs = this.props.collectionData && this.props.collectionData.pubs ? this.props.collectionData.pubs : [];
 		return (
 			<div style={styles.container}>
 				
 
 				{(()=>{
-					const length = this.props.collectionData.pubs ? this.props.collectionData.pubs.length : 0;
+					const length = collectionPubs.length;
 					if (!length) {
 						return (<div style={styles.emptyBlock}>
 							<FormattedMessage

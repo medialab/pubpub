@@ -9,8 +9,10 @@ const DropdownProp = React.createClass({
 	propTypes: {
 		choices: PropTypes.array,
 		selectedValue: PropTypes.object,
+		saveChange: PropTypes.func,
 	},
 	onValueChange: function(changedValue, callback) {
+		this.props.saveChange();
 		callback();
 	},
 	focus: function() {
@@ -39,7 +41,8 @@ const DropdownProp = React.createClass({
 styles = {
 	select: {
 		minWidth: '75%',
-		fontFamily: 'Courier'
+		fontFamily: 'Courier',
+		backgroundColor: 'whitesmoke',
 	},
 };
 

@@ -15,7 +15,8 @@ var less      = require('less');
 import {fireBaseURL, firebaseTokenGen, generateAuthToken} from '../services/firebase';
 import {sendAddedAsCollaborator} from '../services/emails';
 
-app.get('/getPub', function(req, res) {
+
+export function getPub(req, res) {
 	const userID = req.user ? req.user._id : undefined;
 	const journalID = req.query.journalID;
 	Pub.getPub(req.query.slug, userID, journalID, (err, pubData)=>{
@@ -30,9 +31,10 @@ app.get('/getPub', function(req, res) {
 			return res.status(201).json(pubData);
 		}
 
-
 	});
-});
+}
+app.get('/getPub', getPub);
+
 
 app.get('/getPubEdit', function(req, res) {
 	const userID = req.user ? req.user._id : undefined;
@@ -192,13 +194,16 @@ app.post('/publishPub', function(req, res) {
 		const isNewPub = pub.history.length === 0;
 		req.body.newVersion.authors.map((authorID)=>{
 			User.findOne({_id: authorID}, {'followers':1}).lean().exec(function (err, author) {
-				author && author.followers.map((follower)=>{
+				const followers = author && author.follows ? author.follows : [];
+				
+				followers.map((follower)=>{
 					if (isNewPub) {
 						Notification.createNotification('followers/newPub', req.body.host, author, follower, pub._id);
 					} else {
 						Notification.createNotification('followers/newVersion', req.body.host, author, follower, pub._id);
 					}
 				});	
+				
 			});
 		});
 

@@ -6,7 +6,8 @@ let styles = {};
 const TextProp = React.createClass({
 	propTypes: {
 		selectedValue: PropTypes.string,
-		placeholder: PropTypes.string
+		placeholder: PropTypes.string,
+		saveChange: PropTypes.func,
 	},
 	getInitialState: function() {
 		return {
@@ -15,6 +16,7 @@ const TextProp = React.createClass({
 	},
 	handleChange: function(event) {
 		this.setState({value: event.target.value});
+		this.props.saveChange();
 	},
 	focus: function() {
 		let focused;
@@ -39,7 +41,7 @@ const TextProp = React.createClass({
 styles = {
 	select: {
 		width: '100%',
-		fontFamily: 'courier',
+		fontFamily: 'Courier',
 		borderTop: 'none',
 		borderLeft: 'none',
 		borderRight: 'none',
@@ -47,6 +49,8 @@ styles = {
 		fontSize: '15px',
 		height: '2em',
 		paddingLeft: '5px',
+		outline: 'none',
+		backgroundColor: 'whitesmoke',
 	},
 };
 

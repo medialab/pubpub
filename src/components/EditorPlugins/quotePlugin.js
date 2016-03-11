@@ -4,7 +4,7 @@ import createPubPubPlugin from './PubPub';
 import {Reference} from '../';
 
 const QuoteInputFields = [
-	{title: 'quote', type: 'textArea', params: {placeholder: 'Caption describing the image'}},
+	{title: 'quote', type: 'textArea', params: {placeholder: 'Caption for the quote.'}},
 	{title: 'attribution', type: 'text', params: {placeholder: 'Who said it'}},
 	{title: 'align', type: 'align'},
 	{title: 'size', type: 'size'},
@@ -17,6 +17,9 @@ const QuoteConfig = {
 	autocomplete: true,
 	color: 'rgba(245, 245, 169, 0.5)',
 };
+
+const QUOTE_WRAPPER_CLASS = 'pub-quote-wrapper';
+const QUOTE_CLASS = 'pub-quote';
 
 let styles = {};
 
@@ -37,29 +40,20 @@ const QuotePlugin = React.createClass({
 		const size = this.props.size;
 		const align = this.props.align;
 		const quote = this.props.quote;
-		const quotelines = (quote) ? quote.split('\\n') : [];
 		const attribution = this.props.attribution;
 		const reference = this.props.reference || null;
 
-		const quoteElem = quotelines.map((quoteline, index) => <div style={styles.line} key={index}>{quoteline}</div>);
-
 		let html;
-
-		let style;
-
-		if (align === 'full') {
-			style = styles.full;
-		} else {
-			style = styles.inline;
-		}
 
 		if (this.props.error === 'empty') {
 			html = <span></span>;
 		} else {
-			html = (<Media style={style} size={size} align={align}>
-				{quoteElem}
-				{ (attribution) ? <div style={styles.attribute}> - {attribution}</div> : null}
-				{ (reference) ? <div style={styles.reference}> <Reference citationObject={reference} mode={'mla'} /> </div> : null }
+			html = (<Media className={QUOTE_WRAPPER_CLASS} size={size} align={align}>
+				<div className={QUOTE_CLASS}>
+					{quote}
+					{ (attribution) ? <div style={styles.attribute}> - {attribution}</div> : null}
+					{ (reference) ? <div style={styles.reference}> <Reference citationObject={reference} mode={'mla'} /> </div> : null }
+				</div>
 			</Media>
 		);
 		}
@@ -68,19 +62,8 @@ const QuotePlugin = React.createClass({
 });
 
 styles = {
-	full: {
-		borderTop: '#A7A7A7 solid 1px',
-		borderBottom: '#A7A7A7 solid 1px',
-		padding: '0px 1em',
-		textAlign: 'left'
-	},
 	line: {
 		padding: '1em 0px',
-	},
-	inline: {
-		borderLeft: '#A7A7A7 solid 1px',
-		paddingLeft: '1em',
-		textAlign: 'left'
 	},
 	attribute: {
 		fontStyle: 'italic',

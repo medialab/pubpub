@@ -245,7 +245,7 @@ const Editor = React.createClass({
 		const selections = [];
 
 		// Strip markdown of title, abstract, authorsNote
-		const markdown = fullMD.replace(/\[\[title:.*?\]\]/g, '').replace(/\[\[abstract:.*?\]\]/g, '').replace(/\[\[authorsNote:.*?\]\]/g, '').trim();
+		const markdown = fullMD.replace(/\[\[title:.*?\]\]/gi, '').replace(/\[\[abstract:.*?\]\]/gi, '').replace(/\[\[authorsNote:.*?\]\]/gi, '').trim();
 
 		// const compiledMarkdown = performance.now();
 
@@ -531,7 +531,8 @@ const Editor = React.createClass({
 										title={this.state.title}
 										abstract={this.state.abstract}
 										authorsNote={this.state.authorsNote}
-										minFont={15}
+										minFont={13}
+										maxFont={25}
 										markdown={this.state.markdown}
 										authors={this.getAuthorsArray()}
 										showPubHighlights={this.state.previewPaneMode === 'discussions'}

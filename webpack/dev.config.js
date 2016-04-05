@@ -78,6 +78,7 @@ module.exports = {
   },
   module: {
     loaders: [
+					 { test: /\.js$/, exclude: /node_modules/, include: /.*\/src\/components\/EditorPlugins\/AsyncPlugins/, loader: 'promise-loader?bluebird' },
       { test: /\.jsx?$/, exclude: /node_modules/, loaders: ['babel?' + JSON.stringify(babelLoaderQuery)]},
       { test: /\.json$/, loader: 'json-loader' },
       { test: /\.woff(\?v=\d+\.\d+\.\d+)?$/, loader: "url?limit=10000&mimetype=application/font-woff" },

@@ -35,6 +35,8 @@ import {FormattedMessage} from 'react-intl';
 import {Iterable} from 'immutable';
 import EditorWidgets from '../../components/EditorWidgets/EditorWidgets';
 
+import {loadPlugins} from '../../components/EditorPlugins/index';
+
 let FireBaseURL;
 let styles;
 
@@ -91,7 +93,9 @@ const Editor = React.createClass({
 	componentDidMount() {
 		// FireBaseURL = (process.env.NODE_ENV === 'production' && location.hostname !== 'pubpub-dev.herokuapp.com') ? 'https://pubpub.firebaseio.com/' : 'https://pubpub-dev.firebaseio.com/';
 		FireBaseURL = 'https://pubpub-prod-test-2.firebaseio.com/';
-
+		
+		loadPlugins();
+		
 		if (! this.props.editorData.get('error')) {
 
 			initCodeMirrorMode();
@@ -100,6 +104,7 @@ const Editor = React.createClass({
 				this.initializeEditorData(this.props.editorData.getIn(['pubEditData', 'token']));
 			}
 		}
+		
 	},
 
 	componentWillReceiveProps(nextProps) {

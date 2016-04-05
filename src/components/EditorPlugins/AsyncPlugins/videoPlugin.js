@@ -1,7 +1,7 @@
 import React, {PropTypes} from 'react';
-import Media from './baseMediaPlugin';
-import createPubPubPlugin from './PubPub';
-import ErrorMsg from './ErrorPlugin';
+import Media from '../baseMediaPlugin';
+import createPubPubPlugin from '../PubPub';
+import ErrorMsg from '../ErrorPlugin';
 
 const VideoInputFields = [
 	{title: 'source', type: 'asset', params: {assetType: 'video'}},

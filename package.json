@@ -189,7 +189,9 @@
     "url-loader": "0.5.6",
     "valid-email": "0.0.2",
     "warning": "^2.1.0",
-    "webpack-isomorphic-tools": "^2.2.18"
+    "webpack-isomorphic-tools": "^2.2.18",
+    "promise-loader": "~1.0.0",
+    "bluebird": "~3.3.4"
   },
   "devDependencies": {
     "async": "^1.5.2",

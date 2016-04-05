@@ -1,7 +1,7 @@
 import React, {PropTypes} from 'react';
 // import ImageLoader from 'react-imageloader';
-import Media from './baseMediaPlugin';
-import createPubPubPlugin from './PubPub';
+import Media from '../baseMediaPlugin';
+import createPubPubPlugin from '../PubPub';
 
 const ImageInputFields = [
 	{title: 'source', type: 'asset', params: {assetType: 'image'}},

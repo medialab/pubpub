@@ -1,5 +1,5 @@
 import React, {PropTypes} from 'react';
-import createPubPubPlugin from './PubPub';
+import createPubPubPlugin from '../PubPub';
 import Radium, {Style} from 'radium';
 import smoothScroll from 'utils/smoothscroll';
 

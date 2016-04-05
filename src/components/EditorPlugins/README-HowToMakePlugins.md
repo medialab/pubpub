@@ -15,7 +15,7 @@ An object that takes the following parameters:
 
 ## Loading
 When requiring modules, the WebPack configuration tests the file path against a regular 
-expression that matches every **.js in /components/EditorPlugins/AsyncPlugins.
+expression that matches every .js file in /components/EditorPlugins/AsyncPlugins.
 If it does not match, the module is loaded normally. If it matches, the module is loaded
 as a promise that resolves to the module via promise-loader and Bluebird. In this case,
 the plugin will be loaded on demand when the Editor is mounted.

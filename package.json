@@ -157,7 +157,7 @@
     "react-router": "2.2.4",
     "react-selectize": "^2.0.1",
     "react-textarea-autosize": "^4.0.0",
-    "reactfire": "^0.6.0",
+    "reactfire": "^0.7.0",
     "redux": "^3.4.0",
     "redux-form": "^5.0.1",
     "redux-router": "^2.0.0-beta1",

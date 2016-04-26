@@ -54,12 +54,25 @@ const Plugin = React.createClass({
 		};
 	},
 
+	parsePath: function(path) {
+		console.log(path);
+		if (path.indexOf('>span;0') != -1) {
+			const newPath = path.substring(0,path.length-7);
+			console.log('removed it!', newPath);
+			return newPath;
+		}
+		return path;
+	},
+
+
 	drawHighlight: function() {
 		const selection = this.props.source;
+		console.log(selection);
+
 		try {
 			const result = {
-				startContainerPath: selection.startContainerPath,
-				endContainerPath: selection.endContainerPath,
+				startContainerPath: this.parsePath(selection.startContainerPath),
+				endContainerPath: this.parsePath(selection.endContainerPath),
 				startOffset: selection.startOffset,
 				endOffset: selection.endOffset,
 			};

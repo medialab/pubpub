@@ -50,6 +50,7 @@ const AssetRow = React.createClass({
 				{/* Create Date */}
 				<div style={[styles.hideOnLoad[isLoading], styles.date]}>{assetObject.createDate}</div>
 
+				<span>{(assetObject.inPub) ? 'IN PUB' : ' '}</span>
 
 				{/* Insert Button */}
 				<div key={'insertButton-' + assetObject._id} style={[styles.hideOnLoad[isLoading], styles.delete]} onClick={this.props.insertHandler(assetObject)}>

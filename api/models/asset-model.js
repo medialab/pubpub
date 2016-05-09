@@ -61,4 +61,14 @@ const assetSchema = new Schema({
 	lastUpdated: { type: Date },
 });
 
+assetSchema.statics.getAssetsPerPub = function(pubId, callback) {
+	this.find({'usedInPubs.id': pubId}, function (err, assets) {
+      if (err){
+          return done(err);
+      }
+			console.log(assets);
+			callback(assets);
+  });
+};
+
 module.exports = mongoose.model('Asset', assetSchema);

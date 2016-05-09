@@ -3,6 +3,8 @@
 import React, { PropTypes } from 'react';
 import {connect} from 'react-redux';
 import Radium from 'radium';
+import uniqBy from 'lodash/uniqBy';
+import intersection from 'lodash/intersection';
 
 import {Menu, Button} from 'components';
 
@@ -248,8 +250,19 @@ const MediaLibrary = React.createClass({
 			return <h1><FormattedMessage id="asset.mustBeLogged" defaultMessage="Must be Logged In"/></h1>;
 		}
 
+		const pubAssets =  this.props.editorData.get('pubEditData').get('assets').toJS() || [];
+		for (let pub of pubAssets) {
+			pub.inPub = true;
+		}
+
 		const userAssets = this.props.loginData.getIn(['userData', 'assets']).toJS() || [];
-		const {assets, references, highlights} = this.separateAssets(userAssets);
+		let allAssets = pubAssets.concat(userAssets);
+		allAssets = uniqBy(allAssets, '_id');
+
+
+		const {assets, references, highlights} = this.separateAssets(allAssets);
+
+		console.log(assets);
 
 		return (
 
@@ -428,7 +441,8 @@ const MediaLibrary = React.createClass({
 export default connect( state => {
 	return {
 		slug: state.router.params.slug,
-		loginData: state.login
+		loginData: state.login,
+		editorData: state.editor,
 	};
 })( Radium(MediaLibrary) );
 

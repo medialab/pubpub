@@ -66,7 +66,10 @@ export function getPubEdit(req, res) {
 		}
 
 
-		return res.status(201).json(pubEditData);
+		Asset.getAssetsPerPub(pubEditData._id, (assets) => {
+			pubEditData.assets = assets;
+			return res.status(201).json(pubEditData);
+		});
 
 	});
 }

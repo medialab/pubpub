@@ -56,5 +56,5 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 if (__DEVTOOLS__ && !window.devToolsExtension) {
-	require('utils/createDevToolsWindow')(store);
+	// require('utils/createDevToolsWindow')(store);
 }
